@@ -1,0 +1,9 @@
+turekFSI.f90 renamed as turekFSI_v0.f90
+    This version detects the shape correctly
+    It uses piece-wise linear segments constructed from corner nodes of the elements that lie on the boundary
+    to approximate the surface of the object 
+
+turekFSI_v1.f90 copied from turekFSI_v0 on 25-04-2022
+    This uses all the nodes not just corner ones to detect shapes
+    Check for shapes within a bounding box only
+    calculates force distribution and makes them unique

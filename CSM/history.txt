@@ -1,0 +1,39 @@
+MATLAB 22s
+CODE 4.6s
+CODE -fast 2.5
+
+4*70 0:0.005:0.05
+Unbanded CODE 4.687s
+Unbanded CODE -fast 4.531s
+Banded CODE 1.048s = 4.47x
+Banded CODE -fast 0.517s
+
+8*140 0:0.005:0.05
+Unbanded CODE 1m 37.239s
+Unbanded CODE -fast 1m 14.429s
+Banded CODE 9.337s = 10.4x *v1
+Banded CODE -fast 4.019s *v1
+
+8*140 0:0.005:0.05 (allocate in subroutine)
+Unbanded CODE 1m 37.239s
+Unbanded CODE -fast 1m 14.429s
+Banded CODE 8.223s *v2
+Banded CODE -fast 4.239s *v2
+
+----------------------------------------------------------------
+turekDynamic_v1
+    created to use band solver DGBSV instead of DGESV.
+    allocation for calcMgKgFg done in main
+
+turekDynamic_v2
+created to use band solver DGBSV instead of DGESV.
+allocation for calcMgKgFg done inside subroutine
+
+*v3
+    for using OpenMP
+
+*v2 final code which is working fine. Plot matched with Turek.
+
+*v4
+    copied *v2 to enforce f2018 standard
+
