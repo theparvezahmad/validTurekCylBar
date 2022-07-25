@@ -6,32 +6,6 @@ program turekFSI
    !Real units are in SI units
    !Underscore Variables are in LBM units
 
-   integer, parameter:: &
-      chanH_ = 82, &
-      q = 9, &
-      time_ = 500000, &
-      noOfSnaps = 3, &
-      dispFreq = 100, &
-      avgSpan = 2
-
-   double precision, parameter:: &
-      rhoF_ = 1.0d0, &
-      rhoF = 1000.0d0, &
-      chanL = 2.5d0, & !Length of channel
-      chanH = 0.41d0, & !Width of channel
-      barL = 0.35d0, &
-      barH = 0.02d0, &
-      uMean = 0.2d0, &
-      nu = 0.001d0, &
-      dia = 0.1d0, &
-      xc = 0.2d0, &
-      yc = 0.2d0
-
-   double precision, parameter:: &
-      d0 = 0.0d0, &
-      pi = 4.0d0*datan(1.0d0), &
-      one36th = 1.0d0/36.0d0
-
    integer::nx, ny
    double precision:: nu_, uMean_, uPara_, uParaRamp_, dia_, xc_, yc_, chanL_, barL_, barH_, ii, jj
    double precision:: Clen, Crho, Ct, Cnu, CVel, CFor, tau, t
@@ -533,7 +507,7 @@ program turekFSI
       do i = 1, size(uniqSurfForce,1)
          write(*,*) uniqSurfForce(i,1),uniqSurfForce(i,2)
       end do
-      call distSurfForce2Elem(uniqSurfForce, PSItPointForce)
+      ! call distSurfForce2Elem(uniqSurfForce, PSItPointForce)
 !----------------------------------------------------------------------
       Fx_t = sum(Fx)/min(t_ + 1, avgSpan)
       Fy_t = sum(Fy)/min(t_ + 1, avgSpan)
@@ -579,38 +553,38 @@ program turekFSI
 
 contains
 
-   subroutine distSurfForce2Elem(uniqSurfForce, PSItPointForce)
-   implicit none
-   ! input: uniqSurfForce(N*4) N(=no of unique force interaction points) X [x y Fx Fy]
-   ! output: PSItPointForce(nEl) point force integral for each element 
-   double precision,dimension(:,:),intent(in) :: uniqSurfForce
-   double precision,allocatable,dimension(:),intent(out) :: PSItPointForce
-   integer::iUniqSurfForce
+   ! subroutine distSurfForce2Elem(uniqSurfForce, PSItPointForce)
+   ! implicit none
+   ! ! input: uniqSurfForce(N*4) N(=no of unique force interaction points) X [x y Fx Fy]
+   ! ! output: PSItPointForce(nEl) point force integral for each element 
+   ! double precision,dimension(:,:),intent(in) :: uniqSurfForce
+   ! double precision,allocatable,dimension(:),intent(out) :: PSItPointForce
+   ! integer::iUniqSurfForce
 
-   allocate(PSItPointForce(nNodesPerEl,nEl))
-   PSItPointForce=d0
+   ! allocate(PSItPointForce(nNodesPerEl,nEl))
+   ! PSItPointForce=d0
 
-   do i=1,size(topEl)
-      x1 = bounDispTopEl(degEl*(i-1),1)
-      x2 = bounDispTopEl(degEl*i,1)
-      y1 = bounDispTopEl(degEl*(i-1),2)
-      y2 = bounDispTopEl(degEl*i,1,2)
+   ! do i=1,size(topEl)
+   !    x1 = bounDispTopEl(degEl*(i-1),1)
+   !    x2 = bounDispTopEl(degEl*i,1)
+   !    y1 = bounDispTopEl(degEl*(i-1),2)
+   !    y2 = bounDispTopEl(degEl*i,1,2)
 
-      do iUniqSurfForce = 1, size(uniqSurfForce,1)
-         x = uniqSurfForce(iUniqSurfForce,1)
-         ! y = uniqSurfForce(iUniqSurfForce,2)
+   !    do iUniqSurfForce = 1, size(uniqSurfForce,1)
+   !       x = uniqSurfForce(iUniqSurfForce,1)
+   !       ! y = uniqSurfForce(iUniqSurfForce,2)
 
-         if ( x .ge. x1 .and. x .le. x2 ) then
+   !       if ( x .ge. x1 .and. x .le. x2 ) then
 
-            xNat = (2.0d0*x - (x1+x2))/(x2-x1)
-            PSItPointForce(:,topEl(i)) = PSItPointForce(:,topEl(i)) + psiN(xNat,1.0d0)
-         end if         
-      end do
-   end do
+   !          xNat = (2.0d0*x - (x1+x2))/(x2-x1)
+   !          PSItPointForce(:,topEl(i)) = PSItPointForce(:,topEl(i)) + psiN(xNat,1.0d0)
+   !       end if         
+   !    end do
+   ! end do
 
    
    
-   end subroutine distSurfForce2Elem
+   ! end subroutine distSurfForce2Elem
 
 subroutine setupElemMap(dofMapBC_, coupleRange_)
       implicit none
