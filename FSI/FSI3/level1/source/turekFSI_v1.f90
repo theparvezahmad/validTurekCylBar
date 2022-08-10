@@ -597,7 +597,8 @@ contains
          x = uniqSurfForce(iUniqSurfForce,1)
          y = uniqSurfForce(iUniqSurfForce,2)
 
-         if ( x .ge. x1 .and. x .lt. x2 .and. y .gt. (min(y1,y2)-0.5d0) .and. y .lt. (max(y1,y2)+0.5d0)) then
+         ! if ( x .ge. x1 .and. x .lt. x2 .and. y .gt. (min(y1,y2)-0.5d0) .and. y .lt. (max(y1,y2)+0.5d0)) then
+         if ( x .ge. x1 .and. x .lt. x2 .and. y .gt. (y1-0.5d0) .and. y .lt. (y2+0.5d0)) then
 
             xNat = (2.0d0*x - (x1+x2))/(x2-x1)
             psiNEval=psiN(xNat,1.0d0)
@@ -624,7 +625,8 @@ contains
          x = uniqSurfForce(iUniqSurfForce,1)
          y = uniqSurfForce(iUniqSurfForce,2)
 
-         if ( x .ge. x1 .and. x .lt. x2 .and. y .gt. (min(y1,y2)-0.5d0) .and. y .lt. (max(y1,y2)+0.5d0)) then
+         ! if ( x .ge. x1 .and. x .lt. x2 .and. y .gt. (min(y1,y2)-0.5d0) .and. y .lt. (max(y1,y2)+0.5d0)) then
+         if ( x .ge. x1 .and. x .lt. x2 .and. y .gt. (y1-0.5d0) .and. y .lt. (y2+0.5d0)) then
 
             xNat = (2.0d0*x - (x1+x2))/(x2-x1)
             psiNEval=psiN(xNat,-1.0d0)
@@ -651,7 +653,8 @@ contains
          x = uniqSurfForce(iUniqSurfForce,1)
          y = uniqSurfForce(iUniqSurfForce,2)
 
-         if ( x .gt. (min(x1,x2)-0.5d0) .and. x .lt. (max(x1,x2)+0.5d0) .and. y .ge. y1 .and. y .lt. y2) then
+         ! if ( x .gt. (min(x1,x2)-0.5d0) .and. x .lt. (max(x1,x2)+0.5d0) .and. y .ge. y1 .and. y .lt. y2) then
+         if ( x .gt. (x1-0.5d0) .and. x .lt. (x2+0.5d0) .and. y .ge. y1 .and. y .lt. y2) then
 
             yNat = (2.0d0*y - (y1+y2))/(y2-y1)
             psiNEval=psiN(1.0d0,yNat)
