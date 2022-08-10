@@ -3,7 +3,7 @@ module userInput
    public
 
    integer, parameter:: &
-      chanH_ = 82, &
+      chanH_ = 164, &
       q = 9, &
       time_ = 500000, &
       noOfSnaps = 3, &

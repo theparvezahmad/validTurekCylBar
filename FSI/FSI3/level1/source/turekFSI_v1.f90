@@ -35,6 +35,11 @@ program turekFSI
    ! integer, allocatable, dimension(:)::hash
    double precision, allocatable, dimension(:, :)::surfForce_, surfForce, uniqSurfForce
 
+   double precision,allocatable,dimension(:,:):: PSItPointForce
+
+   double precision,allocatable,dimension(:) :: tempSum
+   ! allocate(tempSum(nEl))
+
    solnumber = 0
 
    write (*, *) '======================================================'
@@ -51,8 +56,8 @@ program turekFSI
 !===Other LBM parameters===
    chanL_ = chanL/Clen
    dia_ = dia/Clen
-   xc_ = xc/Clen
-   yc_ = yc/Clen
+   xc_ = xc/Clen + 1.5d0
+   yc_ = yc/Clen + 1.5d0
    barL_ = barL/Clen
    barH_ = barH/Clen
    nx = int(chanL_)
@@ -142,10 +147,10 @@ program turekFSI
 
    allocate (DeltaG(nDofBC))
    DeltaG = 0.0d0 !Put arbitrary values here
-   DeltaG(55:56) = [0.0d0, 5.0d0]
-   DeltaG(43:44) = [0.0d0, 5.0d0]
-   DeltaG(83:84) = [0.0d0, -5.0d0]
-   DeltaG(71:72) = [0.0d0, -5.0d0]
+   DeltaG(55:56) = [0.0d0, 3.0d0]
+   DeltaG(43:44) = [0.0d0, 3.0d0]
+   DeltaG(83:84) = [0.0d0, -3.0d0]
+   DeltaG(71:72) = [0.0d0, -3.0d0]
    ! DeltaG(111:112) = [2.0d0, 2.0d0]
 
    ! cnt = 1
@@ -259,8 +264,8 @@ program turekFSI
          isBar = .false.
          isCyl = .false.
 
-         ii = i - 1.5
-         jj = j - 1.5
+         ii = i! - 1.5
+         jj = j! - 1.5
 
          isCyl = ((ii - xc_)**2.0 + (jj - yc_)**2.0)**0.5 .le. 0.5*dia_
 
@@ -482,7 +487,8 @@ program turekFSI
                      Fy(avgSpan) = Fy(avgSpan) + tmp2
 
                      cnt = cnt + 1
-                     surfForce_(cnt, :) = [0.5*(i + ia) - 1.5d0, 0.5*(j + ja) - 1.5d0, tmp1, tmp2]
+                     ! surfForce_(cnt, :) = [0.5*(i + ia) - 1.5d0, 0.5*(j + ja) - 1.5d0, tmp1, tmp2]
+                     surfForce_(cnt, :) = [0.5d0*(i + ia), 0.5d0*(j + ja), tmp1, tmp2]
                   end if
 
                   if (isn(ia, ja) .eq. 3) then !wall
@@ -505,9 +511,15 @@ program turekFSI
       !                      1, 3, 20, 30], [6, 4], order=[2, 1])
       call addDuplicateFields(surfForce, uniqSurfForce)
       do i = 1, size(uniqSurfForce,1)
-         write(*,*) uniqSurfForce(i,1),uniqSurfForce(i,2)
+         uniqSurfForce(i,3)=1
+         uniqSurfForce(i,4)=3*i
+         ! write(*,*) uniqSurfForce(i,1),uniqSurfForce(i,2)
       end do
-      ! call distSurfForce2Elem(uniqSurfForce, PSItPointForce)
+      call distSurfForce2Elem(uniqSurfForce, PSItPointForce, tempSum)
+
+      ! write(*,*) tempSum
+      write(*,*) sum(tempSum),sum(uniqSurfForce(:,3))
+      ! stop
 !----------------------------------------------------------------------
       Fx_t = sum(Fx)/min(t_ + 1, avgSpan)
       Fy_t = sum(Fy)/min(t_ + 1, avgSpan)
@@ -553,38 +565,110 @@ program turekFSI
 
 contains
 
-   ! subroutine distSurfForce2Elem(uniqSurfForce, PSItPointForce)
-   ! implicit none
-   ! ! input: uniqSurfForce(N*4) N(=no of unique force interaction points) X [x y Fx Fy]
-   ! ! output: PSItPointForce(nEl) point force integral for each element 
-   ! double precision,dimension(:,:),intent(in) :: uniqSurfForce
-   ! double precision,allocatable,dimension(:),intent(out) :: PSItPointForce
-   ! integer::iUniqSurfForce
+   subroutine distSurfForce2Elem(uniqSurfForce, PSItPointForce, tempSum)
+   implicit none
+   ! input: uniqSurfForce(N*4) N(=no of unique force interaction points) X [x y Fx Fy]
+   ! output: PSItPointForce(nEl) point force integral for each element 
+   double precision,dimension(:,:),intent(in) :: uniqSurfForce
+   double precision,allocatable,dimension(:,:),intent(out) :: PSItPointForce
+   double precision,allocatable,dimension(:),intent(out) :: tempSum
+   integer::iUniqSurfForce,k
+   double precision:: x1,x2,y1,y2,x,y,xNat,yNat
+   double precision, allocatable, dimension(:, :) :: PSI, PSIt
+   double precision, allocatable, dimension(:) :: psiNEval
 
-   ! allocate(PSItPointForce(nNodesPerEl,nEl))
-   ! PSItPointForce=d0
+   allocate (PSI(2, nDofPerEl))
+   allocate (PSIt(nDofPerEl, 2))
+   allocate (psiNEval(nNodesPerEl))
 
-   ! do i=1,size(topEl)
-   !    x1 = bounDispTopEl(degEl*(i-1),1)
-   !    x2 = bounDispTopEl(degEl*i,1)
-   !    y1 = bounDispTopEl(degEl*(i-1),2)
-   !    y2 = bounDispTopEl(degEl*i,1,2)
-
-   !    do iUniqSurfForce = 1, size(uniqSurfForce,1)
-   !       x = uniqSurfForce(iUniqSurfForce,1)
-   !       ! y = uniqSurfForce(iUniqSurfForce,2)
-
-   !       if ( x .ge. x1 .and. x .le. x2 ) then
-
-   !          xNat = (2.0d0*x - (x1+x2))/(x2-x1)
-   !          PSItPointForce(:,topEl(i)) = PSItPointForce(:,topEl(i)) + psiN(xNat,1.0d0)
-   !       end if         
-   !    end do
-   ! end do
-
+   allocate(PSItPointForce(nNodesPerEl,nEl))
+   PSItPointForce=d0
+   allocate(tempSum(nEl))
+   tempSum=d0
+   write(*,*) size(tempSum)
    
+   do i=1,size(topEl)
+      x1 = bounDispTopEl(degEl*(i-1),1)
+      x2 = bounDispTopEl(degEl*i,1)
+      y1 = bounDispTopEl(degEl*(i-1),2)
+      y2 = bounDispTopEl(degEl*i,2)
+
+      do iUniqSurfForce = 1, size(uniqSurfForce,1)
+         x = uniqSurfForce(iUniqSurfForce,1)
+         y = uniqSurfForce(iUniqSurfForce,2)
+
+         if ( x .ge. x1 .and. x .lt. x2 .and. y .gt. (min(y1,y2)-0.5d0) .and. y .lt. (max(y1,y2)+0.5d0)) then
+
+            xNat = (2.0d0*x - (x1+x2))/(x2-x1)
+            psiNEval=psiN(xNat,1.0d0)
+
+            do k = 1, nNodesPerEl
+               PSI(1, 2*k - 1) = psiNEval(k)
+               PSI(2, 2*k) = psiNEval(k)
+            end do
+            PSIt = transpose(PSI)
+            
+            PSItPointForce(:,topEl(i)) = PSItPointForce(:,topEl(i)) + mulMatVec(PSIt,uniqSurfForce(iUniqSurfForce,3:4))
+            tempSum(topEl(i)) = tempSum(topEl(i)) + uniqSurfForce(iUniqSurfForce,3)
+         end if         
+      end do
+   end do
+
+   do i=1,size(bottomEl)
+      x1 = bounDispBottomEl(degEl*(i-1),1)
+      x2 = bounDispBottomEl(degEl*i,1)
+      y1 = bounDispBottomEl(degEl*(i-1),2)
+      y2 = bounDispBottomEl(degEl*i,2)
+
+      do iUniqSurfForce = 1, size(uniqSurfForce,1)
+         x = uniqSurfForce(iUniqSurfForce,1)
+         y = uniqSurfForce(iUniqSurfForce,2)
+
+         if ( x .ge. x1 .and. x .lt. x2 .and. y .gt. (min(y1,y2)-0.5d0) .and. y .lt. (max(y1,y2)+0.5d0)) then
+
+            xNat = (2.0d0*x - (x1+x2))/(x2-x1)
+            psiNEval=psiN(xNat,-1.0d0)
+
+            do k = 1, nNodesPerEl
+               PSI(1, 2*k - 1) = psiNEval(k)
+               PSI(2, 2*k) = psiNEval(k)
+            end do
+            PSIt = transpose(PSI)
+            
+            PSItPointForce(:,bottomEl(i)) = PSItPointForce(:,bottomEl(i)) + mulMatVec(PSIt,uniqSurfForce(iUniqSurfForce,3:4))
+            tempSum(bottomEl(i)) = tempSum(bottomEl(i)) + uniqSurfForce(iUniqSurfForce,3)
+         end if         
+      end do
+   end do
    
-   ! end subroutine distSurfForce2Elem
+   do i=1,size(rightEl)
+      x1 = bounDispRightEl(degEl*(i-1),1)
+      x2 = bounDispRightEl(degEl*i,1)
+      y1 = bounDispRightEl(degEl*(i-1),2)
+      y2 = bounDispRightEl(degEl*i,2)
+
+      do iUniqSurfForce = 1, size(uniqSurfForce,1)
+         x = uniqSurfForce(iUniqSurfForce,1)
+         y = uniqSurfForce(iUniqSurfForce,2)
+
+         if ( x .gt. (min(x1,x2)-0.5d0) .and. x .lt. (max(x1,x2)+0.5d0) .and. y .ge. y1 .and. y .lt. y2) then
+
+            yNat = (2.0d0*y - (y1+y2))/(y2-y1)
+            psiNEval=psiN(1.0d0,yNat)
+
+            do k = 1, nNodesPerEl
+               PSI(1, 2*k - 1) = psiNEval(k)
+               PSI(2, 2*k) = psiNEval(k)
+            end do
+            PSIt = transpose(PSI)
+            
+            PSItPointForce(:,rightEl(i)) = PSItPointForce(:,rightEl(i)) + mulMatVec(PSIt,uniqSurfForce(iUniqSurfForce,3:4))
+            tempSum(rightEl(i)) = tempSum(rightEl(i)) + uniqSurfForce(iUniqSurfForce,3)
+         end if         
+      end do
+   end do
+   
+   end subroutine distSurfForce2Elem
 
 subroutine setupElemMap(dofMapBC_, coupleRange_)
       implicit none
