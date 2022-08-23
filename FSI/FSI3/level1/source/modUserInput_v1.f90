@@ -3,6 +3,7 @@ module userInput
    public
 
    integer, parameter:: &
+      dim = 2, &
       chanH_ = 164, &
       q = 9, &
       time_ = 500000, &
@@ -31,11 +32,11 @@ module userInput
    double precision, parameter :: &
       E = uMean**2.0d0*1.4d6, &
       v = 0.4d0, &
-      rhoS = 1.0d3, &
-      Lx = 0.02d0, &
-      Ly = 0.35d0, &
-      Lz = 1.0d0
-      ! totalLoad = rhoS*2.0d0
+      rhoS = 1.0d3
+   ! Lx = 0.02d0, &
+   ! Ly = 0.35d0, &
+   ! Lz = 1.0d0
+   ! totalLoad = rhoS*2.0d0
 
    integer, parameter :: &
       degEl = 2, &
