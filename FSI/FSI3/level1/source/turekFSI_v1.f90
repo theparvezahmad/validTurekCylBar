@@ -229,10 +229,8 @@ program turekFSI
       call applyInletOutletBC2()
       !----------------------------------------------------------------------
       call detectDeformedShape(isn)
-      call applyObjWallBC_calcForceObj(cnt, surfForce_)
+      call applyObjWallBC_calcForceObj(cnt, surfForce)
 
-      allocate (surfForce(cnt, 4))
-      surfForce = surfForce_(1:cnt, :)
       ! allocate(surfForce(6,4))
       ! surfForce = reshape([1, 3, 5, 6,&
       !                      1, 3, 3, 9,&
@@ -1075,11 +1073,12 @@ contains
 
    end subroutine applyInletOutletBC2
 
-   subroutine applyObjWallBC_calcForceObj(cnt, surfForce_)
+   subroutine applyObjWallBC_calcForceObj(cnt, surfForce)
       implicit none
 
       integer, intent(out) :: cnt
-      double precision, allocatable, dimension(:, :), intent(out) :: surfForce_
+      double precision, allocatable, dimension(:, :), intent(out) :: surfForce
+      double precision, allocatable, dimension(:, :) :: surfForce_
 
       allocate (surfForce_(int(2*barL_ + barH_)*4, 4))
 
@@ -1129,6 +1128,9 @@ contains
             end if
          end do
       end do
+
+      allocate (surfForce(cnt, 4))
+      surfForce = surfForce_(1:cnt, :)
 
    end subroutine applyObjWallBC_calcForceObj
 
