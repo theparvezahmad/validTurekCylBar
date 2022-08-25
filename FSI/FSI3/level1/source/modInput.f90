@@ -24,11 +24,6 @@ module input
       xc = 0.2d0, &
       yc = 0.2d0
 
-   double precision, parameter:: &
-      d0 = 0.0d0, &
-      pi = 4.0d0*datan(1.0d0), &
-      one36th = 1.0d0/36.0d0
-
    double precision, parameter :: &
       E = uMean**2.0d0*1.4d6, &
       v = 0.4d0, &

@@ -1005,6 +1005,7 @@ contains
       nNodes = (nElx*degEl + 1)*(nEly*degEl + 1) - flag*(nElx*nEly)*(degEl - 1)**2 !total no of global nodes
       nDofPerEl = nDofPerNode*nNodesPerEl
       nDof = nDofPerNode*nNodes !total DOF including BC DOFs
+      nDofBC = nDof - size(dofBC) !!total DOF excluding BC DOFs
       lenElx = barL/nElx
       lenEly = barH/nEly
       lenElx_ = barL_/nElx
@@ -1188,5 +1189,50 @@ contains
       end do
 
    end subroutine undeformedInterface
+
+   function dateTime()
+
+      implicit none
+      character(len=30)::dateTime
+      character(len=10):: ampm
+      integer:: d, h, m, n, s, y, mm, values(8)
+      character(len=3), parameter, dimension(12) :: &
+         month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+      call date_and_time(values=values)
+
+      y = values(1)
+      m = values(2)
+      d = values(3)
+      h = values(5)
+      n = values(6)
+      s = values(7)
+      mm = values(8)
+
+      if (h < 12) then
+         ampm = 'AM'
+      elseif (h == 12) then
+         if (n == 0 .and. s == 0) then
+            ampm = 'Noon'
+         else
+            ampm = 'PM'
+         end if
+      else
+         h = h - 12
+         if (h < 12) then
+            ampm = 'PM'
+         elseif (h == 12) then
+            if (n == 0 .and. s == 0) then
+               ampm = 'Midnight'
+            else
+               ampm = 'AM'
+            end if
+         end if
+      end if
+
+      write (dateTime, '(i2,1x,a,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)') &
+         d, trim(month(m)), y, h, ':', n, ':', s, '.', mm, trim(ampm)
+
+   end function dateTime
 
 end module solver

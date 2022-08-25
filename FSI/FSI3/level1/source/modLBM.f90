@@ -23,12 +23,13 @@ contains
 
    end subroutine oppoVector
 
-   subroutine setupD2Q9(vector, weight)
+   subroutine setupD2Q9(vector, weight, minusVector)
       implicit none
       integer, parameter::d = 2, q = 9
       integer:: a
       integer, allocatable, dimension(:, :), intent(out) :: vector
       double precision, allocatable, dimension(:), intent(out) :: weight
+      integer, allocatable, dimension(:), intent(out):: minusVector
       allocate (vector(0:q - 1, d))
       allocate (weight(0:q - 1))
 
@@ -47,6 +48,8 @@ contains
          if (a .ge. 1 .and. a .le. 4) weight(a) = 1.0d0/9.0d0
          if (a .ge. 5 .and. a .le. 8) weight(a) = 1.0d0/36.0d0
       end do
+
+      call oppoVector(vector, minusVector)
 
    end subroutine setupD2Q9
 
