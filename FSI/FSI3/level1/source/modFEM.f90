@@ -1,5 +1,5 @@
-module shapeFun
-   use userInput, only: degEl, flag
+module fem
+   use input, only: degEl, flag
    implicit none
 
    integer, parameter, private::n = (degEl + 1)**2 - flag*(degEl - 1)**2 !nodes per element
@@ -313,4 +313,4 @@ contains
 
    end function dpsiNdEta
 
-end module shapeFun
+end module fem

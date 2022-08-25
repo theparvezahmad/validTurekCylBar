@@ -1,7 +1,7 @@
 program main
-   use userInput
-   use shapeFun
-   use mathOp
+   use input
+   use fem
+   use math
 
    implicit none
    !Implements banded solver from LAPACK
@@ -338,12 +338,12 @@ contains
 
                !C=E/(1-v^2)*[1 v 0;v 1 0;0 0 (1-v)/2];
                C = E/((1 + v)*(1 - 2*v))*reshape([1 - v, v, 0.0d0, v, 1 - v, 0.0d0, 0.0d0, 0.0d0, (1 - 2*v)/2], &
-                  [3, 3], order=[2, 1])
+                                                 [3, 3], order=[2, 1])
 
                S01 = mulMatVec(C, E01)
 
                S_Mat = reshape([S01(1), S01(3), 0.0d0, 0.0d0, S01(3), S01(2), 0.0d0, 0.0d0, &
-                  0.0d0, 0.0d0, S01(1), S01(3), 0.0d0, 0.0d0, S01(3), S01(2)], [4, 4], order=[2, 1])
+                                0.0d0, 0.0d0, S01(1), S01(3), 0.0d0, 0.0d0, S01(3), S01(2)], [4, 4], order=[2, 1])
 
                BLt = transpose(BL)
                BLtCBL = Lz*mulMat(BLt, mulMat(C, BL)) !Integrand for KL

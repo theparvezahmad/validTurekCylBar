@@ -7,7 +7,7 @@ FFLAGS= -mkl -CB -traceback
 # -traceback -CB
 #LIBS=-llapack -lblas
 #-O3 -Wall -Wextra -std=f2008 #optimization (for level 3) flags, compiler warnings and the strictest adherence to the latest standards
-SRC=modUserInput_v1.f90 modShapeFun_v2.f90 modMathOp.f90 modLBM.f90 turekFSI_v1.f90 
+SRC=modInput.f90 modFEM.f90 modMath.f90 modLBM.f90 modSolver.f90 turekFSI_v1.f90 
 OBJ=${SRC:.f90=.o} #substitute .f90 with .o
 
 %.o: %.f90 #wildcard rule, creation of *.o depends on *.f90

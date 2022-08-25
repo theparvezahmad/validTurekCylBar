@@ -1,6 +1,6 @@
-module userInput
+module input
    implicit none
-   public
+   ! public
 
    integer, parameter:: &
       dim = 2, &
@@ -69,4 +69,4 @@ contains
 
    end subroutine setupBC
 
-end module userInput
+end module input

@@ -7,8 +7,10 @@ contains
       implicit none
 
       integer, dimension(0:, :), intent(in) :: vector
-      integer, dimension(0:size(vector, 1) - 1), intent(out) :: kb
+      integer, allocatable, dimension(:), intent(out) :: kb
       integer:: a, a1
+
+      allocate (kb(0:size(vector, 1) - 1))
 
       do a = 0, size(vector, 1) - 1
          do a1 = a, size(vector, 1) - 1

@@ -1,7 +1,7 @@
 program turekFSI
-   use userInput
-   use mathOp
-   use shapeFun
+   use input
+   use math
+   use fem
    implicit none
    !Real units are in SI units
    !Underscore Variables are in LBM units
@@ -56,8 +56,8 @@ program turekFSI
    double precision, allocatable, dimension(:, :)::refBounTopEl, refBounBottomEl, refBounRightEl
    double precision, allocatable, dimension(:, :)::bounDispTopEl, bounDispBottomEl, bounDispRightEl, bounCoord
    double precision:: lenElx_, lenEly_
-   double precision,allocatable,dimension(:)::xIntersect
-   double precision,allocatable,dimension(:)::sortedA,uniqSortedA
+   double precision, allocatable, dimension(:)::xIntersect
+   double precision, allocatable, dimension(:)::sortedA, uniqSortedA
 
    solnumber = 0
 
@@ -151,8 +151,8 @@ program turekFSI
    nNodes = (nElx*degEl + 1)*(nEly*degEl + 1) - flag*(nElx*nEly)*(degEl - 1)**2 !total no of global nodes
    nDofPerEl = nDofPerNode*nNodesPerEl
    nDof = nDofPerNode*nNodes !total DOF including BC DOFs
-   lenElx_=barL_/nElx
-   lenEly_=barH_/nEly
+   lenElx_ = barL_/nElx
+   lenEly_ = barH_/nEly
 
    call setupBC(dofBC)
    nDofBC = nDof - size(dofBC)
@@ -219,22 +219,21 @@ program turekFSI
    allocate (bounDispBottomEl(0:size(bottomEl), 2))
    allocate (bounDispRightEl(0:size(rightEl), 2))
 
-   allocate(bounCoord(size(topEl)+size(bottomEl)+size(rightEl)+2,2))
+   allocate (bounCoord(size(topEl) + size(bottomEl) + size(rightEl) + 2, 2))
 
-
-   refBounTopEl(0, 1:2) = [xc_+0.5d0*dia_, yc_+0.5d0*barH_]
+   refBounTopEl(0, 1:2) = [xc_ + 0.5d0*dia_, yc_ + 0.5d0*barH_]
    do k = 1, size(topEl)
       refBounTopEl(k, 1) = refBounTopEl(0, 1) + k*lenElx_
       refBounTopEl(k, 2) = refBounTopEl(0, 2)
    end do
 
-   refBounBottomEl(0, 1:2) = [xc_+0.5d0*dia_, yc_-0.5d0*barH_]
+   refBounBottomEl(0, 1:2) = [xc_ + 0.5d0*dia_, yc_ - 0.5d0*barH_]
    do k = 1, size(bottomEl)
       refBounBottomEl(k, 1) = refBounBottomEl(0, 1) + k*lenElx_
       refBounBottomEl(k, 2) = refBounBottomEl(0, 2)
    end do
 
-   refBounRightEl(0, 1:2) = [xc_ + 0.5d0*dia_ + barL_, yc_-0.5d0*barH_]
+   refBounRightEl(0, 1:2) = [xc_ + 0.5d0*dia_ + barL_, yc_ - 0.5d0*barH_]
    do k = 1, size(rightEl)
       refBounRightEl(k, 1) = refBounRightEl(0, 1)
       refBounRightEl(k, 2) = refBounRightEl(0, 2) + k*lenEly_
@@ -286,9 +285,9 @@ program turekFSI
    do i = 2, nx + 1
       do j = 2, ny + 2
 
-         isBar=.false.
-         isCyl=.false.
-         
+         isBar = .false.
+         isCyl = .false.
+
          ii = i - 1.5
          jj = j - 1.5
 
@@ -319,26 +318,26 @@ program turekFSI
          ! reshape([0.0d0, 1.0d0, 2.0d0, 3.0d0,0.0d0,0.0d0, 10.0d0, 20.0d0, 15.0d0, 0.0d0,0.0d0,10.0d0], [6, 2]))
          ! xIntersect = linPieceWiseIntersect([10.0d0,5.0d0],&
          ! reshape([0.0d0,0.0d0, 1.0d0, 2.0d0, 3.0d0,3.0d0,0.0d0,0.0d0,10.0d0, 10.0d0, 10.0d0, 10.0d0, 0.0d0,0.0d0], [7, 2]))
-         
+
          ! uniqSortedA = sortAscendUnique([-5.0d0,0.0d0,1.0d0,3.0d0,10.0d0,5.8d0,2.0d0,5.0d0])
          ! uniqSortedA = sortAscendUnique([0.0d0,0.0d0,0.0d0,0.0d0,3.2d0,0.0d0,0.0d0,0.0d0])
          ! uniqSortedA = sortAscendUnique(xIntersect)
 
-         bounDispTopEl    = refBounTopEl    + bounDofTopEl
+         bounDispTopEl = refBounTopEl + bounDofTopEl
          bounDispBottomEl = refBounBottomEl + bounDofBottomEl
-         bounDispRightEl  = refBounRightEl  + bounDofRightEl
+         bounDispRightEl = refBounRightEl + bounDofRightEl
 
-         bounCoord(1:size(topEl)+1,:)=bounDispTopEl
-         bounCoord(size(topEl)+size(rightEl)+1:size(topEl)+1:-1,:)=bounDispRightEl
-         bounCoord(size(topEl)+size(rightEl)+size(bottomEl)+1:size(topEl)+size(rightEl)+1:-1,:)=bounDispBottomEl
-         bounCoord(size(topEl)+size(rightEl)+size(bottomEl)+2,:)=bounDispTopEl(0,:) !to close the polygon
+         bounCoord(1:size(topEl) + 1, :) = bounDispTopEl
+         bounCoord(size(topEl) + size(rightEl) + 1:size(topEl) + 1:-1, :) = bounDispRightEl
+         bounCoord(size(topEl) + size(rightEl) + size(bottomEl) + 1:size(topEl) + size(rightEl) + 1:-1, :) = bounDispBottomEl
+         bounCoord(size(topEl) + size(rightEl) + size(bottomEl) + 2, :) = bounDispTopEl(0, :) !to close the polygon
 
-         xIntersect=linPieceWiseIntersect([ii,jj],bounCoord)
-         uniqSortedA=sortAscendUnique(xIntersect)
+         xIntersect = linPieceWiseIntersect([ii, jj], bounCoord)
+         uniqSortedA = sortAscendUnique(xIntersect)
 
-         do k=1,size(uniqSortedA)
-            if(ii .le. uniqSortedA(k)) then
-               if(mod(k,2)==0) then
+         do k = 1, size(uniqSortedA)
+            if (ii .le. uniqSortedA(k)) then
+               if (mod(k, 2) == 0) then
                   isBar = .true.
                end if
                exit
@@ -347,8 +346,8 @@ program turekFSI
 
          if (isCyl .or. isBar) then
             isn(i, j) = 1
-         ! elseif (j == 1 .or. j == ny + 2) then
-         !    isn(i, j) = 2
+            ! elseif (j == 1 .or. j == ny + 2) then
+            !    isn(i, j) = 2
          else
             isn(i, j) = 0
          end if
@@ -356,8 +355,8 @@ program turekFSI
       end do
    end do
 
-   isn(:,1) = 2
-   isn(:,ny+2) = 2
+   isn(:, 1) = 2
+   isn(:, ny + 2) = 2
 
    open (unit=12, file="region.dat")
 

@@ -1,4 +1,4 @@
-module mathOp
+module math
    implicit none
 
    public
@@ -349,53 +349,4 @@ contains
 
    end function dateTime
 
-   subroutine addDuplicateFields(surfForce, uniqSurfForce)
-      implicit none
-      double precision, dimension(:, :), intent(in) :: surfForce
-      double precision, allocatable, dimension(:, :), intent(out) :: uniqSurfForce
-      
-      double precision, dimension(size(surfForce, 1), size(surfForce, 2)) :: uniqSurfForce_
-      integer, allocatable, dimension(:)::hash
-      integer:: i, k, j, cntUniq, cntHash
-
-      cntUniq = 0
-      cntHash = 0
-      allocate (hash(size(surfForce, 1) - 1))
-
-      outer: do i = 1, size(surfForce, 1)
-
-         do k = 1, cntHash
-            if (i .eq. hash(k)) then
-               cycle outer
-            end if
-         end do
-
-         cntUniq = cntUniq + 1
-         uniqSurfForce_(cntUniq, :) = surfForce(i, :)
-         inner: do j = i, size(surfForce, 1)
-
-            if (j == i) then
-               cycle
-            end if
-
-            do k = 1, cntHash
-               if (j .eq. hash(k)) then
-                  cycle inner
-               end if
-            end do
-
-            if (surfForce(i, 1) .eq. surfForce(j, 1) .and. surfForce(i, 2) .eq. surfForce(j, 2)) then
-               cntHash = cntHash + 1
-               hash(cntHash) = j
-               uniqSurfForce_(cntUniq, 3:4) = uniqSurfForce_(cntUniq, 3:4) + surfForce(j, 3:4)
-            end if
-
-         end do inner
-      end do outer
-
-      allocate (uniqSurfForce(cntUniq, size(surfForce, 2)))
-      uniqSurfForce = uniqSurfForce_(1:cntUniq, :)
-
-   end subroutine addDuplicateFields
-
-end module mathOp
+end module math
