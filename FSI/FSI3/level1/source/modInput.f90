@@ -6,7 +6,7 @@ module input
       dim = 2, &
       chanH_ = 82, &
       q = 9, &
-      time_ = 500000, &
+      time_ = 500, &
       noOfSnaps = 3, &
       dispFreq = 1, &
       avgSpan = 2
