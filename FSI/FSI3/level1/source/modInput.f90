@@ -4,11 +4,11 @@ module input
 
    integer, parameter:: &
       dim = 2, &
-      chanH_ = 164, &
+      chanH_ = 82, &
       q = 9, &
       time_ = 500000, &
       noOfSnaps = 3, &
-      dispFreq = 100, &
+      dispFreq = 1, &
       avgSpan = 2
 
    double precision, parameter:: &
@@ -18,7 +18,7 @@ module input
       chanH = 0.41d0, & !Width of channel
       barL = 0.35d0, &
       barH = 0.02d0, &
-      uMean = 2.0d0, &
+      uMean = 0.2d0, &
       nu = 0.001d0, &
       dia = 0.1d0, &
       xc = 0.2d0, &
