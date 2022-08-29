@@ -1,12 +1,12 @@
-# FC=ifort #fortran compiler
-FC=gfortran
-# FFLAGS=-mkl -fast -CB -traceback
-FFLAGS=-g
+FC=ifort #fortran compiler
+# FC=gfortran
+FFLAGS=-mkl# -xCORE-AVX2
+# FFLAGS=-g
 #-mkl -fast
 #-warn all -check all -stand f18 
 # -g
 # -traceback -CB
-LIBS= -L/usr/local/lib/ -llapack -lblas
+# LIBS= -L/usr/local/lib/ -llapack -lblas
 #-O3 -Wall -Wextra -std=f2008 #optimization (for level 3) flags, compiler warnings and the strictest adherence to the latest standards
 SRC=modInput.f90 modFEM.f90 modMath.f90 modLBM.f90 modSolver.f90 turekFSI.f90 
 OBJ=${SRC:.f90=.o} #substitute .f90 with .o

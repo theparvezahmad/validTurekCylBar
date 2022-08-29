@@ -275,15 +275,15 @@ contains
          integer:: a, i, j
          double precision::tmp1, tmp2, tmp3
 
-         do i = 2, nx + 1
-            do j = 2, ny + 1
+         do j = 2, ny + 1
+            do i = 2, nx + 1
                tmp1 = d0
                tmp2 = d0
                tmp3 = d0
                do a = 0, q - 1
                   tmp1 = tmp1 + f(a, i, j)
-                  tmp2 = tmp2 + f(a, i, j)*ci(a, 1)
-                  tmp3 = tmp3 + f(a, i, j)*ci(a, 2)
+                  tmp2 = tmp2 + f(a, i, j)*ci(1, a)
+                  tmp3 = tmp3 + f(a, i, j)*ci(2, a)
                end do
 
                rho(i, j) = tmp1
@@ -300,10 +300,10 @@ contains
          integer::a, i, j
          double precision::tmp1, tmp2, feq
 
-         do i = 2, nx + 1
-            do j = 2, ny + 1
+         do j = 2, ny + 1
+            do i = 2, nx + 1
                do a = 0, q - 1
-                  tmp1 = ux(i, j)*ci(a, 1) + uy(i, j)*ci(a, 2)
+                  tmp1 = ux(i, j)*ci(1, a) + uy(i, j)*ci(2, a)
                   tmp2 = ux(i, j)*ux(i, j) + uy(i, j)*uy(i, j)
                   feq = wi(a)*rho(i, j)*(1.0 + 3.0*tmp1 + 4.5*tmp1*tmp1 - 1.5*tmp2)
                   ft(a, i, j) = f(a, i, j) - (f(a, i, j) - feq)/tau !collision
@@ -318,11 +318,11 @@ contains
 
          integer::a, i, j, ia, ja
 
-         do i = 2, nx + 1 !Streaming post-collision
-            do j = 2, ny + 1
+         do j = 2, ny + 1
+            do i = 2, nx + 1 !Streaming post-collision
                do a = 0, q - 1
-                  ia = i + ci(a, 1)
-                  ja = j + ci(a, 2)
+                  ia = i + ci(1, a)
+                  ja = j + ci(2, a)
                   !if (ia<1 )        { ia = nx  }
                   !if (ia>nx)        { ia = 1   }
 
@@ -501,17 +501,17 @@ contains
 
                   do a = 0, q - 1
 
-                     ia = i + ci(a, 1)
-                     ja = j + ci(a, 2)
+                     ia = i + ci(1, a)
+                     ja = j + ci(2, a)
 
                      if (isn(ia, ja) .eq. 1) then !cylinder
                         f(kb(a), i, j) = ft(a, i, j)
                         f(a, ia, ja) = ft(kb(a), ia, ja)
 
-                        tmp1 = ci(a, 1)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
+                        tmp1 = ci(1, a)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
                         Fx(avgSpan) = Fx(avgSpan) + tmp1
 
-                        tmp2 = ci(a, 2)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
+                        tmp2 = ci(2, a)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
                         Fy(avgSpan) = Fy(avgSpan) + tmp2
                      end if
 
@@ -519,10 +519,10 @@ contains
                         f(kb(a), i, j) = ft(a, i, j)
                         f(a, ia, ja) = ft(kb(a), ia, ja)
 
-                        tmp1 = ci(a, 1)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
+                        tmp1 = ci(1, a)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
                         Fx(avgSpan) = Fx(avgSpan) + tmp1
 
-                        tmp2 = ci(a, 2)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
+                        tmp2 = ci(2, a)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
                         Fy(avgSpan) = Fy(avgSpan) + tmp2
 
                         ! cFSinteract = cFSinteract + 1
@@ -1028,7 +1028,7 @@ contains
          do j = 1, ny + 2
             uPara_ = d0! 6*uMean_*(ny - (j - 1.5))*(j - 1.5)/ny**2;
             do a = 0, q - 1
-               tmp1 = uPara_*ci(a, 1)
+               tmp1 = uPara_*ci(1, a)
                tmp2 = uPara_*uPara_
                f(a, i, j) = wi(a)*rhoF_*(1.0 + 3.0*tmp1 + 4.5*tmp1*tmp1 - 1.5*tmp2)
             end do

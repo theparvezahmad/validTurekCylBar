@@ -4,11 +4,11 @@ module input
 
    integer, parameter:: &
       dim = 2, &
-      chanH_ = 82, &
+      chanH_ = 164, &
       q = 9, &
-      time_ = 500, &
+      time_ = 1000, &
       noOfSnaps = 3, &
-      dispFreq = 1, &
+      dispFreq = 100, &
       avgSpan = 2
 
    double precision, parameter:: &
