@@ -130,7 +130,7 @@ contains
       X = 0.0d0
       ! t = tStart_
 
-      open (UNIT=11, file='dynamic.dat')
+      open (UNIT=11, file='../output/dynamic.dat')
       ! Fx = d0
       ! Fy = d0
       ! open (unit=10, file="../output/tRhoCdCl.dat")
