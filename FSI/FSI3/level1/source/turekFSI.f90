@@ -6,9 +6,9 @@ program turekFSI
    write (*, *) '======================================================'
    write (*, *) 'Program started at :', dateTime()
 
-   call setupLBMvars()
-   call setupD2Q9(ci, wi, kb)
-   call initProbDist()
+   ! call setupLBMvars()
+   ! call setupD2Q9(ci, wi, kb)
+   ! call initProbDist()
 
    call setupBC(dofBC)
    call setupFEMvars()

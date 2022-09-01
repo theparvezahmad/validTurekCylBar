@@ -69,14 +69,15 @@ contains
       double precision, allocatable, dimension(:) :: Xi, Xidd, Xii, Xti
 
       double precision :: tol, err
-      double precision, allocatable, dimension(:, :):: stepLoad
+      ! double precision, allocatable, dimension(:, :):: stepLoad
+      double precision::stepLoad
       integer, allocatable, dimension(:)::pivot
       integer :: iLoad, cntIter, ok
 
       character(len=30):: filename
       integer:: solnumber
       solnumber = 0
-      dt_ = Ct
+      dt_ = dt!Ct
 
       allocate (ft(0:q - 1, nx + 2, ny + 2))
       allocate (ux(nx + 2, ny + 2))
@@ -111,7 +112,7 @@ contains
       allocate (Xi(nDofBC), Xii(nDofBC), Xti(nDofBC), Xidd(nDof))
 
       allocate (PSItPointForce(nDofPerEl, nEl))
-      allocate (stepLoad(nDofPerEl, nEl))
+      ! allocate (stepLoad(nDofPerEl, nEl))
 
       XOld = 0.0d0
       XdOld = 0.0d0
@@ -130,10 +131,10 @@ contains
       ! t = tStart_
 
       open (UNIT=11, file='dynamic.dat')
-      Fx = d0
-      Fy = d0
-      open (unit=10, file="../output/tRhoCdCl.dat")
-      write (10, *) "Variables=timeLBM,timeReal,rho,Cd,Cl"
+      ! Fx = d0
+      ! Fy = d0
+      ! open (unit=10, file="../output/tRhoCdCl.dat")
+      ! write (10, *) "Variables=timeLBM,timeReal,rho,Cd,Cl"
 
       nUdiag = coupleRange
       nLdiag = coupleRange
@@ -141,24 +142,25 @@ contains
       ! topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
       probeDof = nDofBC - int((0.5*nElx*degEl + 1)*nDofPerNode) + [1, 2]
       !----------------------------------------------------------------------
-      do t_ = 0, time_
+      t = tStart
+      do while (t .le. tEnd)
 
-         t = t_*Ct
+         ! t = t_*Ct
+         t = t + dt
+         ! call calcMacroVarLBM()
 
-         call calcMacroVarLBM()
+         ! rhoAvg = sum(rho)/(nx*ny)
+         ! if (rhoAvg .gt. 10.0d0) then
+         !    write (*, *) 'Code Diverged'
+         !    stop
+         ! end if
 
-         rhoAvg = sum(rho)/(nx*ny)
-         if (rhoAvg .gt. 10.0d0) then
-            write (*, *) 'Code Diverged'
-            stop
-         end if
-
-         call collide()
-         call stream()
-         call applyInletOutletBC2()
-         !----------------------------------------------------------------------
-         call detectDeformedShape()
-         call applyObjWallBC_calcForceObj()!(cFSinteract, surfForce)
+         ! call collide()
+         ! call stream()
+         ! call applyInletOutletBC2()
+         ! !----------------------------------------------------------------------
+         ! call detectDeformedShape()
+         ! call applyObjWallBC_calcForceObj()!(cFSinteract, surfForce)
 
          ! allocate(surfForce(6,4))
          ! surfForce = reshape([1, 3, 5, 6,&
@@ -167,16 +169,16 @@ contains
          !                      1, 3, 4, 5,&
          !                      1, 3, 10, 11,&
          !                      1, 3, 20, 30], [6, 4], order=[2, 1])
-         call addDuplicateFields()!(surfForce, uniqSurfForce)
-         deallocate (surfForce)
+         ! call addDuplicateFields()!(surfForce, uniqSurfForce)
+         ! deallocate (surfForce)
          ! do i = 1, size(uniqSurfForce,1)
          !    uniqSurfForce(i,3)=1
          !    uniqSurfForce(i,4)=3*i
          !    ! write(*,*) uniqSurfForce(i,1),uniqSurfForce(i,2)
          ! end do
 
-         call distSurfForce2Elem()!(uniqSurfForce, PSItPointForce)
-         deallocate (uniqSurfForce)
+         ! call distSurfForce2Elem()!(uniqSurfForce, PSItPointForce)
+         ! deallocate (uniqSurfForce)
          ! call calcMgKgFg(PSItPointForce)
          ! write(*,*) tempSum
          ! write(*,*) sum(tempSum),sum(uniqSurfForce(:,3))
@@ -185,7 +187,7 @@ contains
          do iLoad = 1, noOfLoadSteps
             !loadVec=linspace(totalLoad/noOfLoadSteps,totalLoad,noOfLoadSteps)
             !stepLoad=loadVec(iLoad)
-            stepLoad = PSItPointForce*iLoad/noOfLoadSteps
+            stepLoad = totalLoad*iLoad/noOfLoadSteps
 
             !Xi=zeros(nDofBC,1);
             call calcMgKgFg(X, stepLoad, MgB, KgB, Fg)
@@ -245,24 +247,25 @@ contains
          !==========================compDynRes=========================
          !----------------------------------------------------------------------
          !----------------------------------------------------------------------
-         if (mod(t_, dispFreq) .eq. 0) then
-            write (10, '(I8,4(3X,F10.6))') t_, t, rhoAvg, Cd, Cl
-            !write (*, '(I8,4(3X,F10.6))') ts, ts*Ct, rhoAvg, Cd, Cl
+         ! if (mod(t_, dispFreq) .eq. 0) then
+         !    write (10, '(I8,4(3X,F10.6))') t_, t, rhoAvg, Cd, Cl
+         !    !write (*, '(I8,4(3X,F10.6))') ts, ts*Ct, rhoAvg, Cd, Cl
 
-            !write (11, '(I8,6(3X,F10.6))') ts, ux(150, 201), uy(150, 201), ux(200, 250), uy(200, 250), ux(250, 201), uy(250, 201)
-         end if
-         !----------------------------------------------------------------------
-         if (t_ .le. time_ .and. mod(t_, (time_/(noOfSnaps - 1))) .eq. 0) then
+         !    !write (11, '(I8,6(3X,F10.6))') ts, ux(150, 201), uy(150, 201), ux(200, 250), uy(200, 250), ux(250, 201), uy(250, 201)
+         ! end if
+         ! !----------------------------------------------------------------------
+         ! if (t_ .le. time_ .and. mod(t_, (time_/(noOfSnaps - 1))) .eq. 0) then
 
-            solnumber = solnumber + 1
-            write (filename, '(a,i3.3,a)') "../output/snap", solnumber, ".dat"
-            call writeSoln(filename)
-            write (*, '(a,I3,a,I8)') "snap", solnumber, " recorded at LBM time %d", t_
-         end if
+         !    solnumber = solnumber + 1
+         !    write (filename, '(a,i3.3,a)') "../output/snap", solnumber, ".dat"
+         !    call writeSoln(filename)
+         !    write (*, '(a,I3,a,I8)') "snap", solnumber, " recorded at LBM time %d", t_
+         ! end if
          !----------------------------------------------------------------------
       end do!Time loop Ends
 
-      close (10)
+      ! close (10)
+      close (11)
 
    contains
       subroutine calcMacroVarLBM()
@@ -710,7 +713,8 @@ contains
          implicit none
 
          double precision, dimension(:), intent(in) :: DeltaG
-         double precision, dimension(:, :), intent(in) :: stepLoad
+         ! double precision, dimension(:, :), intent(in) :: stepLoad
+         double precision:: stepLoad
          double precision, allocatable, dimension(:, :), intent(out) :: KgB, MgB
          double precision, allocatable, dimension(:), intent(out) :: Fg
 
@@ -874,8 +878,8 @@ contains
                   PSItPSI = rhoS*mulMat(PSIt, PSI) !Integrand for Me
                   Me = Me + tmp*Wt(j)*Wt(i)*PSItPSI !Summing up all Gauss Points
 
-                  ! fPSI = mulMatVec(PSIt, [stepLoad, 0.0d0])
-                  fPSI = stepLoad(:, iEl)
+                  fPSI = mulMatVec(PSIt, [stepLoad, 0.0d0])
+                  ! fPSI = stepLoad(:, iEl)
                   F02 = F02 + tmp*Wt(j)*Wt(i)*fPSI
                end do
             end do
