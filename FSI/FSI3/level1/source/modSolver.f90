@@ -271,8 +271,8 @@ contains
          integer:: a, i, j
          double precision::tmp1, tmp2, tmp3
 
-         do i = 2, nx + 1
-            do j = 2, ny + 1
+         do j = 2, ny + 1
+            do i = 2, nx + 1
                tmp1 = d0
                tmp2 = d0
                tmp3 = d0
@@ -296,8 +296,8 @@ contains
          integer::a, i, j
          double precision::tmp1, tmp2, feq
 
-         do i = 2, nx + 1
-            do j = 2, ny + 1
+         do j = 2, ny + 1
+            do i = 2, nx + 1
                do a = 0, q - 1
                   tmp1 = ux(i, j)*ci(a, 1) + uy(i, j)*ci(a, 2)
                   tmp2 = ux(i, j)*ux(i, j) + uy(i, j)*uy(i, j)
@@ -314,8 +314,8 @@ contains
 
          integer::a, i, j, ia, ja
 
-         do i = 2, nx + 1 !Streaming post-collision
-            do j = 2, ny + 1
+         do j = 2, ny + 1
+            do i = 2, nx + 1 !Streaming post-collision
                do a = 0, q - 1
                   ia = i + ci(a, 1)
                   ja = j + ci(a, 2)
@@ -491,8 +491,8 @@ contains
          Fy(avgSpan) = d0
          cFSinteract = 0
 
-         do i = 2, nx + 1 !BC
-            do j = 2, ny + 1
+         do j = 2, ny + 1
+            do i = 2, nx + 1 !BC
                if (isn(i, j) .eq. 0) then
 
                   do a = 0, q - 1
