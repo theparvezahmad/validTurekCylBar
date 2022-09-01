@@ -4,14 +4,15 @@ module solver
    use math
    use fem
    use lbm
+   use omp_lib
    implicit none
 
-   integer, allocatable, dimension(:, :):: ci
+   double precision, allocatable, dimension(:, :):: ci
    double precision, allocatable, dimension(:):: wi
    integer, allocatable, dimension(:)::kb
 
    integer::nx, ny
-   double precision:: Clen, Crho, Ct, Cnu, CVel, CFor, tau
+   double precision:: Clen, Crho, Ct, Cnu, CVel, CFor, tau, invTau
    double precision:: nu_, uMean_, xc_, yc_, dia_, chanL_, barL_, barH_
 
    double precision, allocatable, dimension(:, :, :):: f
@@ -143,23 +144,23 @@ contains
       !----------------------------------------------------------------------
       call detectDeformedShape()
       do t_ = 0, time_
-
+         !$omp parallel default(shared)
          t = t_*Ct
 
          call calcMacroVarLBM()
 
-         rhoAvg = sum(rho)/(nx*ny)
-         if (rhoAvg .gt. 10.0d0) then
-            write (*, *) 'Code Diverged'
-            stop
-         end if
+         ! rhoAvg = sum(rho)/(nx*ny)
+         ! if (rhoAvg .gt. 10.0d0) then
+         !    write (*, *) 'Code Diverged'
+         !    stop
+         ! end if
 
          call collide()
          call stream()
          call applyInletOutletBC2()
          !----------------------------------------------------------------------
          call applyObjWallBC_calcForceObj()!(cFSinteract, surfForce)
-
+         !$omp end parallel
          ! allocate(surfForce(6,4))
          ! surfForce = reshape([1, 3, 5, 6,&
          !                      1, 3, 3, 9,&
@@ -273,8 +274,9 @@ contains
          implicit none
 
          integer:: a, i, j
-         double precision::tmp1, tmp2, tmp3
+         double precision::tmp1, tmp2, tmp3, tmp4
 
+         !$omp do private(j)
          do j = 2, ny + 1
             do i = 2, nx + 1
                tmp1 = d0
@@ -287,11 +289,12 @@ contains
                end do
 
                rho(i, j) = tmp1
-               ux(i, j) = tmp2/tmp1
-               uy(i, j) = tmp3/tmp1
+               tmp4 = 1.0d0/tmp1
+               ux(i, j) = tmp2*tmp4!tmp2/tmp1
+               uy(i, j) = tmp3*tmp4!tmp3/tmp1
             end do
          end do
-
+         !$omp end do
       end subroutine calcMacroVarLBM
 
       subroutine collide()
@@ -300,17 +303,18 @@ contains
          integer::a, i, j
          double precision::tmp1, tmp2, feq
 
+         !$omp do private(j)
          do j = 2, ny + 1
             do i = 2, nx + 1
                do a = 0, q - 1
                   tmp1 = ux(i, j)*ci(a, 1) + uy(i, j)*ci(a, 2)
                   tmp2 = ux(i, j)*ux(i, j) + uy(i, j)*uy(i, j)
                   feq = wi(a)*rho(i, j)*(1.0 + 3.0*tmp1 + 4.5*tmp1*tmp1 - 1.5*tmp2)
-                  ft(a, i, j) = f(a, i, j) - (f(a, i, j) - feq)/tau !collision
+                  ft(a, i, j) = f(a, i, j) - (f(a, i, j) - feq)*invTau !collision
                end do
             end do
          end do
-
+         !$omp end do
       end subroutine collide
 
       subroutine stream()
@@ -318,11 +322,12 @@ contains
 
          integer::a, i, j, ia, ja
 
+         !$omp do private(j)
          do j = 2, ny + 1
             do i = 2, nx + 1 !Streaming post-collision
                do a = 0, q - 1
-                  ia = i + ci(a, 1)
-                  ja = j + ci(a, 2)
+                  ia = i + int(ci(a, 1))
+                  ja = j + int(ci(a, 2))
                   !if (ia<1 )        { ia = nx  }
                   !if (ia>nx)        { ia = 1   }
 
@@ -330,19 +335,22 @@ contains
                end do
             end do
          end do
+         !$omp end do
       end subroutine stream
 
       subroutine applyInletOutletBC2()
          implicit none
 
          integer::i, j
-         double precision::uPara_, uParaRamp_
+         double precision::uPara_, uParaRamp_, tmp1, tmp2
+         tmp1 = 1.0d0/(ny**2.0d0)
 
+         !$omp do private(j)
          do j = 2, ny + 1
             i = 2
-            uPara_ = 6.0d0*uMean_*(ny - (j - 1.5))*(j - 1.5)/ny**2.0d0; 
+            uPara_ = 6.0d0*uMean_*(ny - (j - 1.5))*(j - 1.5)*tmp1; 
             if (t .lt. 2.0d0) then
-               uParaRamp_ = uPara_*(1 - cos(pi*t/2.0d0))/2.0d0
+               uParaRamp_ = uPara_*(1 - cos(pi*t*0.5d0))*0.5d0
             else
                uParaRamp_ = uPara_
             end if
@@ -351,7 +359,8 @@ contains
             f(5, i, j) = f(7, i, j) - (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*rho(i, j)*uParaRamp_)
             f(8, i, j) = f(6, i, j) + (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*rho(i, j)*uParaRamp_)
          end do
-
+         !$omp end do
+         !$omp do private(j)
          do j = 2, ny + 1
             i = nx + 1
             ux(i, j) = (f(0, i, j) + f(2, i, j) + f(4, i, j) + 2*(f(1, i, j) + f(5, i, j) + f(8, i, j)))/rhoF_ - 1
@@ -359,7 +368,7 @@ contains
             f(6, i, j) = f(8, i, j) - 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*ux(i, j))
             f(7, i, j) = f(5, i, j) + 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*ux(i, j))
          end do
-
+         !$omp end do
       end subroutine applyInletOutletBC2
 
       subroutine detectDeformedShape()!(isn)
@@ -495,14 +504,15 @@ contains
          Fy(avgSpan) = d0
          cFSinteract = 0
 
-         do i = 2, nx + 1 !BC
-            do j = 2, ny + 1
+         !$omp do private(j)
+         do j = 2, ny + 1
+            do i = 2, nx + 1 !BC
                if (isn(i, j) .eq. 0) then
 
                   do a = 0, q - 1
 
-                     ia = i + ci(a, 1)
-                     ja = j + ci(a, 2)
+                     ia = i + int(ci(a, 1))
+                     ja = j + int(ci(a, 2))
 
                      if (isn(ia, ja) .eq. 1) then !cylinder
                         f(kb(a), i, j) = ft(a, i, j)
@@ -538,7 +548,7 @@ contains
                end if
             end do
          end do
-
+         !$omp end do
          ! allocate (surfForce(cFSinteract, 4))
          ! surfForce = surfForce_(1:cFSinteract, :)
 
@@ -989,6 +999,7 @@ contains
       nu_ = nu/Cnu
       uMean_ = uMean/CVel
       tau = 3*nu_ + 0.5d0
+      invTau = 1.0d0/tau
 
       write (*, *) 'Clen = ', Clen
       write (*, *) 'Crho = ', Crho

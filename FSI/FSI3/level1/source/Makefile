@@ -1,6 +1,6 @@
 FC=ifort #fortran compiler
 # FC=gfortran
-FFLAGS=-mkl# -xCORE-AVX2
+FFLAGS=-mkl -g -O2 -xCORE-AVX2 -qopenmp# -warn all
 # FFLAGS=-g
 #-mkl -fast
 #-warn all -check all -stand f18 
