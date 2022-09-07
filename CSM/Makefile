@@ -1,6 +1,6 @@
 FC=ifort #fortran compiler
 #FC=gfortran
-FFLAGS=-mkl -fast
+FFLAGS=-mkl
 #-warn all -check all -stand f18 
 # -g
 # -traceback -CB
@@ -12,8 +12,8 @@ OBJ=${SRC:.f90=.o} #substitute .f90 with .o
 %.o: %.f90 #wildcard rule, creation of *.o depends on *.f90
 	$(FC) $(FFLAGS) -o $@ -c $< $(LIBS) 
 
-turekCSM: $(OBJ)
+turekCSM.x: $(OBJ)
 	$(FC) $(FFLAGS) -o $@ $(OBJ) $(LIBS)
 
 clean: #cleans all the old compilation files
-	@rm -f *.mod *.o turekCSM
+	@rm -f *.mod *.o turekCSM.x
