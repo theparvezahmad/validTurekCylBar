@@ -53,8 +53,8 @@ program main
    write (*, *) 'Coupling Range     :', coupleRange
    write (*, *) 'Total DOFs solved  :', nDofBC
 
-   topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
-   probeDof = nDofBC - (0.5*nElx*degEl + 1)*nDofPerNode + [1, 2]
+   ! topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
+   probeDof = nDofBC - (0.5*nEly*degEl + 1)*nDofPerNode + [1, 2]
 
    call compDynRes(tStart, tEnd, dt, probeDof)
 
@@ -360,7 +360,7 @@ contains
                PSItPSI = rho*Lz*mulMat(PSIt, PSI) !Integrand for Me
                Me = Me + tmp*Wt(j)*Wt(i)*PSItPSI !Summing up all Gauss Points
 
-               fPSI = Lz*mulMatVec(PSIt, [stepLoad, 0.0d0])
+               fPSI = Lz*mulMatVec(PSIt, [0.0d0, stepLoad])
                F02 = F02 + tmp*Wt(j)*Wt(i)*fPSI
             end do
          end do
@@ -406,7 +406,8 @@ contains
       integer, intent(out) :: coupleRange_
       integer, allocatable, dimension(:, :) :: dofMap
       integer, allocatable, dimension(:) :: cntS
-      integer :: iEl, nNd, cnt, i, j, k, p, m, n
+      integer :: iEl, nNd
+      integer :: cnt, i, j, k, p, m, n
       !
       !global degEl flag nEl nElx nEly dofBC nDofPerNode nDofPerEl
       !Node Map relating global DOF to local DOF for all elements
@@ -418,22 +419,22 @@ contains
       allocate (cntS(nEl))
       cntS = 0
 
-      do n = 0, nEly - 1
-         if (n > 0 .and. n < nEly) then
-            cnt = cnt - (nElx*degEl + 1)*nDofPerNode !to account for common nodes along y
+      do n = 0, nElx - 1
+         if (n > 0 .and. n < nElx) then
+            cnt = cnt - (nEly*degEl + 1)*nDofPerNode !to account for common nodes along y
          end if
-         do j = 0, degEl
-            do m = 0, nElx - 1
-               if (m > 0 .and. m < nElx) then
+         do i = 0, degEl
+            do m = 0, nEly - 1
+               if (m > 0 .and. m < nEly) then
                   cnt = cnt - nDofPerNode !to account for common nodes along x
                end if
-               do i = 0, degEl
-                  iEl = (m + 1) + nElx*n !global element number
+               do j = 0, degEl
+                  iEl = (m + 1) + nEly*n !global element number
                   if (flag == 1 .and. i > 0 .and. i < degEl .and. j > 0 .and. j < degEl) then
                      cntS(iEl) = cntS(iEl) + 1 !count interior nodes for a given element
                      cycle !skip interior node for serendipity element
                   end if
-                  nNd = (i + 1) + (degEl + 1)*j - cntS(iEl) !local node number for a given element
+                  nNd = (j + 1) + (degEl + 1)*i - cntS(iEl) !local node number for a given element
                   !dofMap(iEl,[2*nNd-1 2*nNd])=[ cnt,cnt+1 ] !allot global nodal dof
                   dofMap(iEl, 2*nNd - 1) = cnt
                   dofMap(iEl, 2*nNd) = cnt + 1
@@ -445,7 +446,7 @@ contains
 
       coupleRange_ = dofMap(1, nDofPerEl) - dofMap(1, 1)
 
-      !Replacing BC nodes wi !Replacing BC nodes with zero and renumbering the DOF map(works even for unordered dofBC)
+      !Replacing BC nodes with zero and renumbering the DOF map(works even for unordered dofBC)
       dofMapBC_ = dofMap
       do k = 1, size(dofBC)!for each BC node
          do i = 1, nEl!for each element

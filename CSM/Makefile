@@ -6,14 +6,14 @@ FFLAGS=-mkl -fast
 # -traceback -CB
 #LIBS=-llapack -lblas
 #-O3 -Wall -Wextra -std=f2008 #optimization (for level 3) flags, compiler warnings and the strictest adherence to the latest standards
-SRC=modUserInput.f90 modShapeFun_v2.f90 modMathOp.f90 turekDynamic_v2.f90
+SRC=modUserInput.f90 modShapeFun_v2.f90 modMathOp.f90 turekDynamic_flipxy.f90
 OBJ=${SRC:.f90=.o} #substitute .f90 with .o
 
 %.o: %.f90 #wildcard rule, creation of *.o depends on *.f90
 	$(FC) $(FFLAGS) -o $@ -c $< $(LIBS) 
 
-turek: $(OBJ)
+turekCSM: $(OBJ)
 	$(FC) $(FFLAGS) -o $@ $(OBJ) $(LIBS)
 
 clean: #cleans all the old compilation files
-	@rm -f *.mod *.o turek
+	@rm -f *.mod *.o turekCSM
