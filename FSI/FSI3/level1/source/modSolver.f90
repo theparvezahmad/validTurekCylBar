@@ -140,7 +140,7 @@ contains
       nLdiag = coupleRange
       ldab = 2*nLdiag + nUdiag + 1
       ! topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
-      probeDof = nDofBC - int((0.5*nElx*degEl + 1)*nDofPerNode) + [1, 2]
+      probeDof = nDofBC - int((0.5*nEly*degEl + 1)*nDofPerNode) + [1, 2]
       !----------------------------------------------------------------------
       t = tStart
       do while (t .le. tEnd)
@@ -878,7 +878,7 @@ contains
                   PSItPSI = rhoS*mulMat(PSIt, PSI) !Integrand for Me
                   Me = Me + tmp*Wt(j)*Wt(i)*PSItPSI !Summing up all Gauss Points
 
-                  fPSI = mulMatVec(PSIt, [stepLoad, 0.0d0])
+                  fPSI = mulMatVec(PSIt, [0.0d0, stepLoad])
                   ! fPSI = stepLoad(:, iEl)
                   F02 = F02 + tmp*Wt(j)*Wt(i)*fPSI
                end do

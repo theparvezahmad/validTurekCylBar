@@ -32,13 +32,13 @@ module input
       ! Lx = 0.02d0, &
       ! Ly = 0.35d0, &
       ! Lz = 1.0d0
-      totalLoad = rhoS*2.0d0
+      totalLoad = -rhoS*2.0d0
 
    integer, parameter :: &
       degEl = 2, &
       flag = 0, &
-      nElx = 140, &
-      nEly = 8, &
+      nElx = 4, &
+      nEly = 4, &
       nDofPerNode = 2
 
    double precision, parameter :: &
