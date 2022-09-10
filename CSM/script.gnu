@@ -37,12 +37,12 @@ set grid
 set key right top
 #set xrange[0:6.28]
 #set yrange[-1:1]
-set output 'uy_16_280_16n.png'
 
 #plot "dynamic.dat" every ::401::2000 u 1:2 w l ls 1
 #plot "dynamic.dat" every ::1601::2000 u 1:2 title "code" w l ls 1, "yDisp.txt" u 1:($2*-1) '%lf,%lf' title "benchmark" w l ls 2
 #plot "dynamic.dat" every ::801::1000 u 1:2 title "code" w l ls 1, "yDisp.txt" u 1:($2*-1) '%lf,%lf' title "benchmark" w l ls 2
-plot "dynamic_16_280_16n_2.dat" every ::399::499 u 1:2 title "code" w l ls 1, "yDisp.txt" u 1:($2*-1) '%lf,%lf' title "benchmark" w l ls 2 dashtype 4
+set output 'ux_spanxyFy.png'
+plot "dynamic.dat" every ::399::499 u 1:2 title "code" w l ls 1, "xDisp.txt" u 1:2 '%lf,%lf' title "benchmark" w l ls 2 dashtype 4
 
-set output 'ux_16_280_16n.png'
-plot "dynamic_16_280_16n_2.dat" every ::399::499 u 1:3 title "code" w l ls 1, "xDisp.txt" u 1:2 '%lf,%lf' title "benchmark" w l ls 2 dashtype 4
+set output 'uy_spanxyFy.png'
+plot "dynamic.dat" every ::399::499 u 1:3 title "code" w l ls 1, "yDisp.txt" u 1:2 '%lf,%lf' title "benchmark" w l ls 2 dashtype 4

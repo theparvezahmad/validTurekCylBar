@@ -13,8 +13,8 @@ module userInput
    integer, parameter :: &
       degEl = 2, &
       flag = 0, &
-      nElx = 4, &
-      nEly = 3, &
+      nElx = 35, &
+      nEly = 2, &
       nDofPerNode = 2
 
    double precision, parameter :: &
@@ -30,13 +30,20 @@ contains
 
    subroutine setupBC(dofBC)
       implicit none
-      integer :: i
+      integer :: i, nNodes, nDof, cnt
       integer, allocatable, dimension(:), intent(out) :: dofBC
 
       allocate (dofBC((nEly*degEl + 1)*nDofPerNode))
 
-      do i = 1, (nEly*degEl + 1)*nDofPerNode
-         dofBC(i) = i !Global DOF where BC is specified on primary vars
+      nNodes = (nElx*degEl + 1)*(nEly*degEl + 1) - flag*(nElx*nEly)*(degEl - 1)**2 !total no of global nodes
+      nDof = nDofPerNode*nNodes !total DOF including BC DOFs
+
+      cnt = 0
+      do i = 1, nDof, (nElx*degEl + 1)*nDofPerNode
+         cnt = cnt + 1
+         dofBC(cnt) = i !Global DOF where BC is specified on primary vars
+         cnt = cnt + 1
+         dofBC(cnt) = i + 1
       end do
 
    end subroutine setupBC
