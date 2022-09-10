@@ -42,7 +42,7 @@ program main
    call setupBC(dofBC)
    nDofBC = nDof - size(dofBC) !total DOF excluding BC DOFs
 
-   call setupElemMap(dofMapBC, coupleRange)!check
+   call setupElemMapYX(dofMapBC, coupleRange)!check
 
    !allocate (Kg(nDofBC, nDofBC))
    !allocate (Mg(nDofBC, nDofBC))
@@ -361,6 +361,7 @@ contains
                Me = Me + tmp*Wt(j)*Wt(i)*PSItPSI !Summing up all Gauss Points
 
                fPSI = Lz*mulMatVec(PSIt, [0.0d0, stepLoad])
+               ! fPSI = Lz*mulMatVec(PSIt, [stepLoad, 0.0d0])
                F02 = F02 + tmp*Wt(j)*Wt(i)*fPSI
             end do
          end do
@@ -399,7 +400,7 @@ contains
       end do
    end subroutine calcMgKgFg
 
-   subroutine setupElemMap(dofMapBC_, coupleRange_)
+   subroutine setupElemMapYX(dofMapBC_, coupleRange_)
       implicit none
       ! Arguments declarations
       integer, allocatable, dimension(:, :), intent(out) :: dofMapBC_
@@ -468,6 +469,76 @@ contains
 
       end do
 
-   end subroutine setupElemMap
+   end subroutine setupElemMapYX
+
+   subroutine setupElemMapXY(dofMapBC_, coupleRange_)
+      implicit none
+      ! Arguments declarations
+      integer, allocatable, dimension(:, :), intent(out) :: dofMapBC_
+      integer, intent(out) :: coupleRange_
+      integer, allocatable, dimension(:, :) :: dofMap
+      integer, allocatable, dimension(:) :: cntS
+      integer :: iEl, nNd, cnt, i, j, k, p, m, n
+      !
+      !global degEl flag nEl nElx nEly dofBC nDofPerNode nDofPerEl
+      !Node Map relating global DOF to local DOF for all elements
+      !m2f: dofMap=zeros(nEl,nDofPerEl)
+      allocate (dofMap(nEl, nDofPerEl))
+      allocate (dofMapBC_(nEl, nDofPerEl))
+
+      cnt = 1
+      allocate (cntS(nEl))
+      cntS = 0
+
+      do n = 0, nEly - 1
+         if (n > 0 .and. n < nEly) then
+            cnt = cnt - (nElx*degEl + 1)*nDofPerNode !to account for common nodes along y
+         end if
+         do j = 0, degEl
+            do m = 0, nElx - 1
+               if (m > 0 .and. m < nElx) then
+                  cnt = cnt - nDofPerNode !to account for common nodes along x
+               end if
+               do i = 0, degEl
+                  iEl = (m + 1) + nElx*n !global element number
+                  if (flag == 1 .and. i > 0 .and. i < degEl .and. j > 0 .and. j < degEl) then
+                     cntS(iEl) = cntS(iEl) + 1 !count interior nodes for a given element
+                     cycle !skip interior node for serendipity element
+                  end if
+                  nNd = (i + 1) + (degEl + 1)*j - cntS(iEl) !local node number for a given element
+                  !dofMap(iEl,[2*nNd-1 2*nNd])=[ cnt,cnt+1 ] !allot global nodal dof
+                  dofMap(iEl, 2*nNd - 1) = cnt
+                  dofMap(iEl, 2*nNd) = cnt + 1
+                  cnt = cnt + nDofPerNode
+               end do
+            end do
+         end do
+      end do
+
+      coupleRange_ = dofMap(1, nDofPerEl) - dofMap(1, 1)
+
+      !Replacing BC nodes wi !Replacing BC nodes with zero and renumbering the DOF map(works even for unordered dofBC)
+      dofMapBC_ = dofMap
+      do k = 1, size(dofBC)!for each BC node
+         do i = 1, nEl!for each element
+            do j = 1, nDofPerEl!for each DOF
+               if (dofMapBC_(i, j) == dofBC(k)) then
+                  dofMapBC_(i, j) = 0 !set BC DOF to zero
+               end if
+               if (dofMapBC_(i, j) > dofBC(k)) then
+                  dofMapBC_(i, j) = dofMapBC_(i, j) - 1 !decrement global DOF numbering
+               end if
+            end do
+         end do
+
+         do p = 1, size(dofBC)!helps work with unordered dofBC
+            if (dofBC(p) > dofBC(k)) then
+               dofBC(p) = dofBC(p) - 1
+            end if
+         end do
+
+      end do
+
+   end subroutine setupElemMapXY
 
 end program main

@@ -5,10 +5,10 @@
             "name": "Run GDB",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/FSI/FSI3/level1/source/fsi3l1.x",
+            "program": "${workspaceRoot}/CSM/turekCSM.x",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceRoot}/FSI/FSI3/level1/source",
+            "cwd": "${workspaceRoot}/CSM",
             "externalConsole": false,
             "MIMode": "gdb",
             "preLaunchTask": "make"
