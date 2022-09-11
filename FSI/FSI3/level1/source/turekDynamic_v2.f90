@@ -54,7 +54,7 @@ program main
    write (*, *) 'Total DOFs solved  :', nDofBC
 
    topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
-   probeDof = nDofBC - int((0.5*nElx*degEl + 1)*nDofPerNode) + [1, 2]
+   probeDof = nDofBC - (nElx/2*degEl + 1)*nDofPerNode + [1, 2]
 
    call compDynRes(tStart, tEnd, dt, probeDof)
 
