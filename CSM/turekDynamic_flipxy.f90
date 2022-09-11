@@ -42,7 +42,7 @@ program main
    call setupBC(dofBC)
    nDofBC = nDof - size(dofBC) !total DOF excluding BC DOFs
 
-   call setupElemMapXY(dofMapBC, coupleRange)!check
+   call setupElemMapYX(dofMapBC, coupleRange)!check
 
    !allocate (Kg(nDofBC, nDofBC))
    !allocate (Mg(nDofBC, nDofBC))
@@ -54,8 +54,8 @@ program main
    write (*, *) 'Total DOFs solved  :', nDofBC
 
    ! topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
-   ! probeDof = nDofBC - (0.5*nEly*degEl + 1)*nDofPerNode + [1, 2]
-   probeDof = (nEly/2*degEl + 1)*(nElx*degEl)*nDofPerNode + [-1, 0]
+   probeDof = nDofBC - (nEly/2*degEl + 1)*nDofPerNode + [1, 2]
+   ! probeDof = (nEly/2*degEl + 1)*(nElx*degEl)*nDofPerNode + [-1, 0]
 
    call compDynRes(tStart, tEnd, dt, probeDof)
 
