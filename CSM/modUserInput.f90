@@ -13,8 +13,8 @@ module userInput
    integer, parameter :: &
       degEl = 2, &
       flag = 0, &
-      nElx = 70, &
-      nEly = 4, &
+      nElx = 140, &
+      nEly = 8, &
       nDofPerNode = 2
 
    double precision, parameter :: &
