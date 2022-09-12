@@ -40,7 +40,7 @@ contains
       ! integer::a, ia, ja, i, j, k, m, n, p, cnt, t_
       integer:: t_, cFSinteract
       ! double precision:: t, tmp1, tmp2, tmp3, uPara_, uParaRamp_, ii, jj
-      double precision:: Cd, Cl, rhoAvg, Fx(avgSpan), Fy(avgSpan)
+      double precision:: Cd, Cl, rhoSum, Fx(avgSpan), Fy(avgSpan)
       ! double precision:: Fx(avgSpan), Fy(avgSpan), FxLocal, FyLocal
       ! double precision:: wi(0:q - 1)
 
@@ -149,8 +149,8 @@ contains
 
          call calcMacroVarLBM()
 
-         rhoAvg = sum(rho)/(nx*ny)
-         if (rhoAvg .gt. 10.0d0) then
+         ! rhoAvg = sum(rho)/(nx*ny)
+         if (rhoSum/(nx*ny) .gt. 10.0d0) then
             write (*, *) 'Code Diverged'
             stop
          end if
@@ -250,7 +250,7 @@ contains
          !----------------------------------------------------------------------
          !----------------------------------------------------------------------
          if (mod(t_, dispFreq) .eq. 0) then
-            write (10, '(I8,4(3X,F10.6))') t_, t, rhoAvg, Cd, Cl
+            write (10, '(I8,4(3X,F10.6))') t_, t, rhoSum/(nx*ny), Cd, Cl
             !write (*, '(I8,4(3X,F10.6))') ts, ts*Ct, rhoAvg, Cd, Cl
 
             !write (11, '(I8,6(3X,F10.6))') ts, ux(150, 201), uy(150, 201), ux(200, 250), uy(200, 250), ux(250, 201), uy(250, 201)
@@ -275,8 +275,9 @@ contains
 
          integer:: a, i, j
          double precision::tmp1, tmp2, tmp3, tmp4
+         rhoSum = 0.0d0
 
-         !$omp do private(j)
+         !$omp do private(j) reduction(+: rhoSum)
          do j = 2, ny + 1
             do i = 2, nx + 1
                tmp1 = d0
@@ -292,6 +293,7 @@ contains
                tmp4 = 1.0d0/tmp1
                ux(i, j) = tmp2*tmp4!tmp2/tmp1
                uy(i, j) = tmp3*tmp4!tmp3/tmp1
+               rhoSum = rhoSum + tmp1
             end do
          end do
          !$omp end do
@@ -504,7 +506,7 @@ contains
          Fy(avgSpan) = d0
          cFSinteract = 0
 
-         !$omp do private(j)
+         !$omp do private(j) reduction(+: Fx,Fy)
          do j = 2, ny + 1
             do i = 2, nx + 1 !BC
                if (isn(i, j) .eq. 0) then
