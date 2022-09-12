@@ -149,11 +149,11 @@ contains
 
          call calcMacroVarLBM()
 
-         ! rhoAvg = sum(rho)/(nx*ny)
-         ! if (rhoAvg .gt. 10.0d0) then
-         !    write (*, *) 'Code Diverged'
-         !    stop
-         ! end if
+         rhoAvg = sum(rho)/(nx*ny)
+         if (rhoAvg .gt. 10.0d0) then
+            write (*, *) 'Code Diverged'
+            stop
+         end if
 
          call collide()
          call stream()
