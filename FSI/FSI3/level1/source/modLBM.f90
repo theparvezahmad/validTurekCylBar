@@ -6,7 +6,7 @@ contains
    subroutine oppoVector(vector, kb)
       implicit none
 
-      integer, dimension(0:, :), intent(in) :: vector
+      double precision, dimension(0:, :), intent(in) :: vector
       integer, allocatable, dimension(:), intent(out) :: kb
       integer:: a, a1
 
@@ -14,7 +14,7 @@ contains
 
       do a = 0, size(vector, 1) - 1
          do a1 = a, size(vector, 1) - 1
-            if (vector(a, 1) + vector(a1, 1) .eq. 0 .and. vector(a, 2) + vector(a1, 2) .eq. 0) then
+            if (vector(a, 1) + vector(a1, 1) .eq. 0.0d0 .and. vector(a, 2) + vector(a1, 2) .eq. 0.0d0) then
                kb(a) = a1
                kb(a1) = a
             end if
@@ -27,21 +27,21 @@ contains
       implicit none
       integer, parameter::d = 2, q = 9
       integer:: a
-      integer, allocatable, dimension(:, :), intent(out) :: vector
+      double precision, allocatable, dimension(:, :), intent(out) :: vector
       double precision, allocatable, dimension(:), intent(out) :: weight
       integer, allocatable, dimension(:), intent(out):: minusVector
       allocate (vector(0:q - 1, d))
       allocate (weight(0:q - 1))
 
-      vector(0, :) = [0, 0]
-      vector(1, :) = [1, 0]
-      vector(2, :) = [0, 1]
-      vector(3, :) = [-1, 0]
-      vector(4, :) = [0, -1]
-      vector(5, :) = [1, 1]
-      vector(6, :) = [-1, 1]
-      vector(7, :) = [-1, -1]
-      vector(8, :) = [1, -1]
+      vector(0, :) = [0.0d0, 0.0d0]
+      vector(1, :) = [1.0d0, 0.0d0]
+      vector(2, :) = [0.0d0, 1.0d0]
+      vector(3, :) = [-1.0d0, 0.0d0]
+      vector(4, :) = [0.0d0, -1.0d0]
+      vector(5, :) = [1.0d0, 1.0d0]
+      vector(6, :) = [-1.0d0, 1.0d0]
+      vector(7, :) = [-1.0d0, -1.0d0]
+      vector(8, :) = [1.0d0, -1.0d0]
 
       do a = 0, q - 1
          if (a .eq. 0) weight(a) = 4.0d0/9.0d0

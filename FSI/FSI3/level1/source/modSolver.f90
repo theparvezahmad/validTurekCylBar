@@ -4,14 +4,15 @@ module solver
    use math
    use fem
    use lbm
+   use omp_lib
    implicit none
 
-   integer, allocatable, dimension(:, :):: ci
+   double precision, allocatable, dimension(:, :):: ci
    double precision, allocatable, dimension(:):: wi
    integer, allocatable, dimension(:)::kb
 
    integer::nx, ny
-   double precision:: Clen, Crho, Ct, Cnu, CVel, CFor, tau
+   double precision:: Clen, Crho, Ct, Cnu, CVel, CFor, tau, invTau
    double precision:: nu_, uMean_, xc_, yc_, dia_, chanL_, barL_, barH_
 
    double precision, allocatable, dimension(:, :, :):: f
@@ -39,7 +40,7 @@ contains
       ! integer::a, ia, ja, i, j, k, m, n, p, cnt, t_
       integer:: t_, cFSinteract
       ! double precision:: t, tmp1, tmp2, tmp3, uPara_, uParaRamp_, ii, jj
-      double precision:: Cd, Cl, rhoAvg, Fx(avgSpan), Fy(avgSpan)
+      double precision:: Cd, Cl, rhoSum, Fx(avgSpan), Fy(avgSpan)
       ! double precision:: Fx(avgSpan), Fy(avgSpan), FxLocal, FyLocal
       ! double precision:: wi(0:q - 1)
 
@@ -129,7 +130,7 @@ contains
       X = 0.0d0
       ! t = tStart_
 
-      open (UNIT=11, file='dynamic.dat')
+      ! open (UNIT=11, file='dynamic.dat')
       Fx = d0
       Fy = d0
       open (unit=10, file="../output/tRhoCdCl.dat")
@@ -141,14 +142,15 @@ contains
       ! topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
       probeDof = nDofBC - int((0.5*nElx*degEl + 1)*nDofPerNode) + [1, 2]
       !----------------------------------------------------------------------
+      call detectDeformedShape()
       do t_ = 0, time_
-
+         !$omp parallel default(shared)
          t = t_*Ct
 
          call calcMacroVarLBM()
 
-         rhoAvg = sum(rho)/(nx*ny)
-         if (rhoAvg .gt. 10.0d0) then
+         ! rhoAvg = sum(rho)/(nx*ny)
+         if (rhoSum/(nx*ny) .gt. 10.0d0) then
             write (*, *) 'Code Diverged'
             stop
          end if
@@ -157,9 +159,8 @@ contains
          call stream()
          call applyInletOutletBC2()
          !----------------------------------------------------------------------
-         call detectDeformedShape()
          call applyObjWallBC_calcForceObj()!(cFSinteract, surfForce)
-
+         !$omp end parallel
          ! allocate(surfForce(6,4))
          ! surfForce = reshape([1, 3, 5, 6,&
          !                      1, 3, 3, 9,&
@@ -167,71 +168,75 @@ contains
          !                      1, 3, 4, 5,&
          !                      1, 3, 10, 11,&
          !                      1, 3, 20, 30], [6, 4], order=[2, 1])
-         call addDuplicateFields()!(surfForce, uniqSurfForce)
-         deallocate (surfForce)
+         !===========commented for CFD only======start==============
+         ! call addDuplicateFields()!(surfForce, uniqSurfForce)
+         ! deallocate (surfForce)
+         !===========commented for CFD only======end================
          ! do i = 1, size(uniqSurfForce,1)
          !    uniqSurfForce(i,3)=1
          !    uniqSurfForce(i,4)=3*i
          !    ! write(*,*) uniqSurfForce(i,1),uniqSurfForce(i,2)
          ! end do
 
-         call distSurfForce2Elem()!(uniqSurfForce, PSItPointForce)
-         deallocate (uniqSurfForce)
-         ! call calcMgKgFg(PSItPointForce)
+         !===========commented for CFD only======start==============
+         ! call distSurfForce2Elem()!(uniqSurfForce, PSItPointForce)
+         ! deallocate (uniqSurfForce)
+         !===========commented for CFD only======end================
          ! write(*,*) tempSum
          ! write(*,*) sum(tempSum),sum(uniqSurfForce(:,3))
          ! stop
-         !==========================compDynRes=========================
-         do iLoad = 1, noOfLoadSteps
-            !loadVec=linspace(totalLoad/noOfLoadSteps,totalLoad,noOfLoadSteps)
-            !stepLoad=loadVec(iLoad)
-            stepLoad = PSItPointForce*iLoad/noOfLoadSteps
+         !===========commented for CFD only======start==============
+         ! do iLoad = 1, noOfLoadSteps
+         !    !loadVec=linspace(totalLoad/noOfLoadSteps,totalLoad,noOfLoadSteps)
+         !    !stepLoad=loadVec(iLoad)
+         !    stepLoad = PSItPointForce*iLoad/noOfLoadSteps
 
-            !Xi=zeros(nDofBC,1);
-            call calcMgKgFg(X, stepLoad, MgB, KgB, Fg)
-            !call calcMgKgFg(X, stepLoad)
-            !Xi=(a0*Mg + Kg)\(Fg + Mg*(a2*XdOld + a3*XddOld))
-            Xi = Fg + mulMatBVec(MgB, a2*XdOld + a3*XddOld, nUdiag, nLdiag)
-            Mtemp = a0*MgB + KgB
-            !call DGESV(nDofBC, 1, Mtemp, nDofBC, pivot, Xi, nDofBC, ok)
-            call DGBSV(nDofBC, nLdiag, nUdiag, 1, Mtemp, ldab, pivot, Xi, nDofBC, ok)
+         !    !Xi=zeros(nDofBC,1);
+         !    call calcMgKgFg(X, stepLoad, MgB, KgB, Fg)
+         !    !call calcMgKgFg(X, stepLoad)
+         !    !Xi=(a0*Mg + Kg)\(Fg + Mg*(a2*XdOld + a3*XddOld))
+         !    Xi = Fg + mulMatBVec(MgB, a2*XdOld + a3*XddOld, nUdiag, nLdiag)
+         !    Mtemp = a0*MgB + KgB
+         !    !call DGESV(nDofBC, 1, Mtemp, nDofBC, pivot, Xi, nDofBC, ok)
+         !    call DGBSV(nDofBC, nLdiag, nUdiag, 1, Mtemp, ldab, pivot, Xi, nDofBC, ok)
 
-            err = 1
-            tol = 1e-8
-            cntIter = 0
+         !    err = 1
+         !    tol = 1e-8
+         !    cntIter = 0
 
-            do while (err > tol)
-               cntIter = cntIter + 1
-               Xidd = a0*Xi - a2*XdOld - a3*XddOld
-               Xti = X + Xi
-               call calcMgKgFg(Xti, stepLoad, MgB, KgB, Fg)
-               !Xii=(a0*Mg + Kg)\(Fg - Mg*Xidd)
-               Xii = Fg - mulMatBVec(MgB, Xidd, nUdiag, nLdiag)
-               Mtemp = a0*MgB + KgB
-               !call DGESV(nDofBC, 1, Mtemp, nDofBC, pivot, Xii, nDofBC, ok)
-               call DGBSV(nDofBC, nLdiag, nUdiag, 1, Mtemp, ldab, pivot, Xii, nDofBC, ok)
-               Xi = Xi + Xii
-               err = norm2(Xii)/norm2(Xi + X)
-               if (cntIter == 10) exit
-            end do !iter loop ends
+         !    do while (err > tol)
+         !       cntIter = cntIter + 1
+         !       Xidd = a0*Xi - a2*XdOld - a3*XddOld
+         !       Xti = X + Xi
+         !       call calcMgKgFg(Xti, stepLoad, MgB, KgB, Fg)
+         !       !Xii=(a0*Mg + Kg)\(Fg - Mg*Xidd)
+         !       Xii = Fg - mulMatBVec(MgB, Xidd, nUdiag, nLdiag)
+         !       Mtemp = a0*MgB + KgB
+         !       !call DGESV(nDofBC, 1, Mtemp, nDofBC, pivot, Xii, nDofBC, ok)
+         !       call DGBSV(nDofBC, nLdiag, nUdiag, 1, Mtemp, ldab, pivot, Xii, nDofBC, ok)
+         !       Xi = Xi + Xii
+         !       err = norm2(Xii)/norm2(Xi + X)
+         !       if (cntIter == 10) exit
+         !    end do !iter loop ends
 
-            if (modulo(int(t/dt), 20) == 0) then
-               write (*, *) t, err, cntIter!, dateTime()
-            end if
+         !    if (modulo(int(t/dt), 20) == 0) then
+         !       write (*, *) t, err, cntIter!, dateTime()
+         !    end if
 
-            ! Res=(Mg*Xidd + Kg*Xii - Fg);!Residual
-            ! DeltaConvG(iLoad,1:3)=[Xii(topLeftPt) Res(topLeftPt) cntIter]; !Converged solution for the last load step
+         !    ! Res=(Mg*Xidd + Kg*Xii - Fg);!Residual
+         !    ! DeltaConvG(iLoad,1:3)=[Xii(topLeftPt) Res(topLeftPt) cntIter]; !Converged solution for the last load step
 
-         end do !iLoad loop ends
+         ! end do !iLoad loop ends
 
-         Xdd = a0*Xi - a2*XdOld - a3*XddOld
-         Xd = XdOld + a6*XddOld + a7*Xdd
-         X = X + Xi
+         ! Xdd = a0*Xi - a2*XdOld - a3*XddOld
+         ! Xd = XdOld + a6*XddOld + a7*Xdd
+         ! X = X + Xi
 
-         XOld = X
-         XdOld = Xd
-         XddOld = Xdd
-
+         ! XOld = X
+         ! XdOld = Xd
+         ! XddOld = Xdd
+         ! write (11, '(3(E12.4,2X))') t, X(probeDof(1)), X(probeDof(2))
+         !===========commented for CFD only======end================
          ! !Analytical solution
          ! Xa=inv(V)*inv(Mg_)*Fg_./Freq.^2.*(1-cos(Freq*t));!constant load
          ! Xa=V*Xa;
@@ -241,12 +246,11 @@ contains
          ! do iProbeDof=1,size(probeDof)
          !   soln(i,iProbeDof+1)=X(probeDof(iProbeDof))
          ! enddo
-         write (11, '(3(E12.4,2X))') t, X(probeDof(1)), X(probeDof(2))
          !==========================compDynRes=========================
          !----------------------------------------------------------------------
          !----------------------------------------------------------------------
          if (mod(t_, dispFreq) .eq. 0) then
-            write (10, '(I8,4(3X,F10.6))') t_, t, rhoAvg, Cd, Cl
+            write (10, '(I8,4(3X,F10.6))') t_, t, rhoSum/(nx*ny), Cd, Cl
             !write (*, '(I8,4(3X,F10.6))') ts, ts*Ct, rhoAvg, Cd, Cl
 
             !write (11, '(I8,6(3X,F10.6))') ts, ux(150, 201), uy(150, 201), ux(200, 250), uy(200, 250), ux(250, 201), uy(250, 201)
@@ -263,14 +267,17 @@ contains
       end do!Time loop Ends
 
       close (10)
+      ! close (11)
 
    contains
       subroutine calcMacroVarLBM()
          implicit none
 
          integer:: a, i, j
-         double precision::tmp1, tmp2, tmp3
+         double precision::tmp1, tmp2, tmp3, tmp4
+         rhoSum = 0.0d0
 
+         !$omp do private(j) reduction(+: rhoSum)
          do j = 2, ny + 1
             do i = 2, nx + 1
                tmp1 = d0
@@ -283,11 +290,13 @@ contains
                end do
 
                rho(i, j) = tmp1
-               ux(i, j) = tmp2/tmp1
-               uy(i, j) = tmp3/tmp1
+               tmp4 = 1.0d0/tmp1
+               ux(i, j) = tmp2*tmp4!tmp2/tmp1
+               uy(i, j) = tmp3*tmp4!tmp3/tmp1
+               rhoSum = rhoSum + tmp1
             end do
          end do
-
+         !$omp end do
       end subroutine calcMacroVarLBM
 
       subroutine collide()
@@ -296,17 +305,18 @@ contains
          integer::a, i, j
          double precision::tmp1, tmp2, feq
 
+         !$omp do private(j)
          do j = 2, ny + 1
             do i = 2, nx + 1
                do a = 0, q - 1
                   tmp1 = ux(i, j)*ci(a, 1) + uy(i, j)*ci(a, 2)
                   tmp2 = ux(i, j)*ux(i, j) + uy(i, j)*uy(i, j)
                   feq = wi(a)*rho(i, j)*(1.0 + 3.0*tmp1 + 4.5*tmp1*tmp1 - 1.5*tmp2)
-                  ft(a, i, j) = f(a, i, j) - (f(a, i, j) - feq)/tau !collision
+                  ft(a, i, j) = f(a, i, j) - (f(a, i, j) - feq)*invTau !collision
                end do
             end do
          end do
-
+         !$omp end do
       end subroutine collide
 
       subroutine stream()
@@ -314,11 +324,12 @@ contains
 
          integer::a, i, j, ia, ja
 
+         !$omp do private(j)
          do j = 2, ny + 1
             do i = 2, nx + 1 !Streaming post-collision
                do a = 0, q - 1
-                  ia = i + ci(a, 1)
-                  ja = j + ci(a, 2)
+                  ia = i + int(ci(a, 1))
+                  ja = j + int(ci(a, 2))
                   !if (ia<1 )        { ia = nx  }
                   !if (ia>nx)        { ia = 1   }
 
@@ -326,19 +337,22 @@ contains
                end do
             end do
          end do
+         !$omp end do
       end subroutine stream
 
       subroutine applyInletOutletBC2()
          implicit none
 
          integer::i, j
-         double precision::uPara_, uParaRamp_
+         double precision::uPara_, uParaRamp_, tmp1, tmp2
+         tmp1 = 1.0d0/(ny**2.0d0)
 
+         !$omp do private(j)
          do j = 2, ny + 1
             i = 2
-            uPara_ = 6.0d0*uMean_*(ny - (j - 1.5))*(j - 1.5)/ny**2.0d0; 
+            uPara_ = 6.0d0*uMean_*(ny - (j - 1.5))*(j - 1.5)*tmp1; 
             if (t .lt. 2.0d0) then
-               uParaRamp_ = uPara_*(1 - cos(pi*t/2.0d0))/2.0d0
+               uParaRamp_ = uPara_*(1 - cos(pi*t*0.5d0))*0.5d0
             else
                uParaRamp_ = uPara_
             end if
@@ -347,7 +361,8 @@ contains
             f(5, i, j) = f(7, i, j) - (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*rho(i, j)*uParaRamp_)
             f(8, i, j) = f(6, i, j) + (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*rho(i, j)*uParaRamp_)
          end do
-
+         !$omp end do
+         !$omp do private(j)
          do j = 2, ny + 1
             i = nx + 1
             ux(i, j) = (f(0, i, j) + f(2, i, j) + f(4, i, j) + 2*(f(1, i, j) + f(5, i, j) + f(8, i, j)))/rhoF_ - 1
@@ -355,7 +370,7 @@ contains
             f(6, i, j) = f(8, i, j) - 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*ux(i, j))
             f(7, i, j) = f(5, i, j) + 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*ux(i, j))
          end do
-
+         !$omp end do
       end subroutine applyInletOutletBC2
 
       subroutine detectDeformedShape()!(isn)
@@ -462,7 +477,7 @@ contains
          isn(:, 1) = 3
          isn(:, ny + 2) = 3
 
-         open (unit=12, file="region.dat")
+         open (unit=12, file="../output/region.dat")
 
          write (12, *) "Variables=x,y,region"
          write (12, '(2(a,I5))') "Zone I=", nx, ",J=", ny
@@ -474,7 +489,7 @@ contains
             write (12, *)
          end do
          close (12)
-
+         ! stop
       end subroutine detectDeformedShape
 
       subroutine applyObjWallBC_calcForceObj()
@@ -482,23 +497,24 @@ contains
 
          ! double precision, allocatable, dimension(:, :) :: surfForce
          integer:: i, j, a, ia, ja!, cFSinteract
-         double precision, allocatable, dimension(:, :) :: surfForce_
+         ! double precision, allocatable, dimension(:, :) :: surfForce_
          double precision:: tmp1, tmp2, Fx_t, Fy_t
 
-         allocate (surfForce_(int(2*barL_ + barH_)*4, 4))
+         ! allocate (surfForce_(int(2*barL_ + barH_)*4, 4))
 
          Fx(avgSpan) = d0
          Fy(avgSpan) = d0
          cFSinteract = 0
 
+         !$omp do private(j) reduction(+: Fx,Fy)
          do j = 2, ny + 1
             do i = 2, nx + 1 !BC
                if (isn(i, j) .eq. 0) then
 
                   do a = 0, q - 1
 
-                     ia = i + ci(a, 1)
-                     ja = j + ci(a, 2)
+                     ia = i + int(ci(a, 1))
+                     ja = j + int(ci(a, 2))
 
                      if (isn(ia, ja) .eq. 1) then !cylinder
                         f(kb(a), i, j) = ft(a, i, j)
@@ -521,9 +537,9 @@ contains
                         tmp2 = ci(a, 2)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
                         Fy(avgSpan) = Fy(avgSpan) + tmp2
 
-                        cFSinteract = cFSinteract + 1
-                        ! surfForce_(cFSinteract, :) = [0.5*(i + ia) - 1.5d0, 0.5*(j + ja) - 1.5d0, tmp1, tmp2]
-                        surfForce_(cFSinteract, :) = [0.5d0*(i + ia), 0.5d0*(j + ja), tmp1, tmp2]
+                        ! cFSinteract = cFSinteract + 1
+                        ! ! surfForce_(cFSinteract, :) = [0.5*(i + ia) - 1.5d0, 0.5*(j + ja) - 1.5d0, tmp1, tmp2]
+                        ! surfForce_(cFSinteract, :) = [0.5d0*(i + ia), 0.5d0*(j + ja), tmp1, tmp2]
                      end if
 
                      if (isn(ia, ja) .eq. 3) then !wall
@@ -534,9 +550,9 @@ contains
                end if
             end do
          end do
-
-         allocate (surfForce(cFSinteract, 4))
-         surfForce = surfForce_(1:cFSinteract, :)
+         !$omp end do
+         ! allocate (surfForce(cFSinteract, 4))
+         ! surfForce = surfForce_(1:cFSinteract, :)
 
          Fx_t = sum(Fx)/min(t_ + 1, avgSpan)
          Fy_t = sum(Fy)/min(t_ + 1, avgSpan)
@@ -985,6 +1001,7 @@ contains
       nu_ = nu/Cnu
       uMean_ = uMean/CVel
       tau = 3*nu_ + 0.5d0
+      invTau = 1.0d0/tau
 
       write (*, *) 'Clen = ', Clen
       write (*, *) 'Crho = ', Crho
