@@ -72,18 +72,18 @@ contains
       ! double precision, allocatable, dimension(:, :):: stepLoad
       double precision::stepLoad
       integer, allocatable, dimension(:)::pivot
-      integer :: iLoad, cntIter, ok
+      integer :: iLoad, cntIter, ok, cnt
 
       character(len=30):: filename
       integer:: solnumber
       solnumber = 0
       dt_ = dt!Ct
 
-      allocate (ft(0:q - 1, nx + 2, ny + 2))
-      allocate (ux(nx + 2, ny + 2))
-      allocate (uy(nx + 2, ny + 2))
-      allocate (rho(nx + 2, ny + 2))
-      allocate (isn(nx + 2, ny + 2))
+      ! allocate (ft(0:q - 1, nx + 2, ny + 2))
+      ! allocate (ux(nx + 2, ny + 2))
+      ! allocate (uy(nx + 2, ny + 2))
+      ! allocate (rho(nx + 2, ny + 2))
+      ! allocate (isn(nx + 2, ny + 2))
 
       allocate (bounDofTopEl(0:degEl*size(topEl), 2))
       allocate (bounDofBottomEl(0:degEl*size(bottomEl), 2))
@@ -140,13 +140,16 @@ contains
       nLdiag = coupleRange
       ldab = 2*nLdiag + nUdiag + 1
       ! topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
-      probeDof = nDofBC - int((0.5*nEly*degEl + 1)*nDofPerNode) + [1, 2]
+      probeDof = nDofBC - (nEly/2*degEl + 1)*nDofPerNode + [1, 2]
       !----------------------------------------------------------------------
       t = tStart
-      do while (t .le. tEnd)
+      cnt = 0
+      do while (t .lt. tEnd)
 
          ! t = t_*Ct
-         t = t + dt
+         cnt = cnt + 1
+         ! t = t + dt
+         t = cnt*dt
          ! call calcMacroVarLBM()
 
          ! rhoAvg = sum(rho)/(nx*ny)
@@ -773,7 +776,9 @@ contains
 
          DeltaEl = 0.0d0
 
+         !$omp parallel default(shared)
          !Back-Mapping Global unknown vector to Element-level vector
+         !$omp do private(i)
          do i = 1, nEl !spans element
             do j = 1, nDofPerEl !spans DOF
                if (dofMapBC(i, j) == 0) then !BC DOFs
@@ -785,7 +790,7 @@ contains
                end if
             end do
          end do
-
+         !$omp end do
          ! !Constant shear BC on top surface for Quadratic Lagrange
          ! for i=1:nElx
          ! F02(nDofPerEl-nDofPerNode*(degEl+1)+1:nDofPerEl,nEl-i+1)=Lz*a/6*T0*[1,0,4,0,1,0]';
@@ -799,6 +804,7 @@ contains
          MgB = 0.0d0
          Fg = 0.0d0
 
+         !$omp do private(iEl,KL,KNL,F01,F02,Me,Ke,Fe) reduction(+: KgB,MgB,Fg)
          do iEl = 1, nEl ! spans element
             KL = 0.0d0
             KNL = 0.0d0
@@ -889,6 +895,7 @@ contains
 
             !Assembling
             !for iEl=1:nEl !for each element
+            ! $omp critical
             do i = 1, nDofPerEl !for i in Ke_ij
                do j = 1, nDofPerEl !for j in Ke_ij
 
@@ -914,8 +921,12 @@ contains
 
                Fg(dofMapBC(iEl, i)) = Fg(dofMapBC(iEl, i)) + Fe(i)
             end do
+            ! $omp end critical
             !end
          end do
+         !$omp end do
+         !$omp end parallel
+
       end subroutine calcMgKgFg
 
       subroutine writeSoln(filename)

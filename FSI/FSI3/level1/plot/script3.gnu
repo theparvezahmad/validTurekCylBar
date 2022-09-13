@@ -44,5 +44,5 @@ plot "../output/dynamic.dat" every ::399::499 u 1:2 title "code" w l ls 1, "../i
 #plot "dynamic.dat" every ::1601::2000 u 1:2 title "code" w l ls 1, "yDisp.txt" u 1:($2*-1) '%lf,%lf' title "benchmark" w l ls 2
 #plot "dynamic.dat" every ::801::1000 u 1:2 title "code" w l ls 1, "yDisp.txt" u 1:($2*-1) '%lf,%lf' title "benchmark" w l ls 2
 set output 'uy.png'
-plot "../output/dynamic.dat" every ::399::499 u 1:3 title "code" w l ls 1, "../input/yDisp.txt" u 1:3 '%lf,%lf' title "benchmark" w l ls 2 dashtype 4
+plot "../output/dynamic.dat" every ::399::499 u 1:3 title "code" w l ls 1, "../input/yDisp.txt" u 1:2 '%lf,%lf' title "benchmark" w l ls 2 dashtype 4
 

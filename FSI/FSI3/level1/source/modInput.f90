@@ -37,7 +37,7 @@ module input
    integer, parameter :: &
       degEl = 2, &
       flag = 0, &
-      nElx = 4, &
+      nElx = 70, &
       nEly = 4, &
       nDofPerNode = 2
 
