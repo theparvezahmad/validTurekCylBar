@@ -1,5 +1,5 @@
 FC=ifort #fortran compiler
-FFLAGS=-mkl# -qopenmp #-CB -traceback
+FFLAGS=-mkl -xCORE-AVX2# -qopenmp #-CB -traceback
 # FC=gfortran
 # FFLAGS=-g -fopenmp #-CB -traceback
 # LIBS=-llapack -lblas
