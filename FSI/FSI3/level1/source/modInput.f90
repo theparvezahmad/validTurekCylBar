@@ -25,19 +25,20 @@ module input
       yc = 0.2d0
 
    double precision, parameter :: &
-      E = uMean**2.0d0*1.4d6, &
+      ! E = uMean**2.0d0*1.4d6, &
+      E = 1.4d6, &
       v = 0.4d0, &
-      rhoS = 1.0d3
-   ! Lx = 0.02d0, &
-   ! Ly = 0.35d0, &
-   ! Lz = 1.0d0
-   ! totalLoad = rhoS*2.0d0
+      rhoS = 1.0d3, &
+      ! Lx = 0.02d0, &
+      ! Ly = 0.35d0, &
+      ! Lz = 1.0d0
+      totalLoad = -rhoS*2.0d0
 
    integer, parameter :: &
       degEl = 2, &
       flag = 0, &
-      nElx = 4, &
-      nEly = 3, &
+      nElx = 70, &
+      nEly = 4, &
       nDofPerNode = 2
 
    double precision, parameter :: &

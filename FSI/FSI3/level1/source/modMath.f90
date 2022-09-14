@@ -17,6 +17,7 @@ contains
 
       if (size(A) /= size(B)) then
          write (*, *) 'Incompatible Vectors'
+         stop
       else
          dotProd = 0.0
          do i = 1, size(A)
@@ -35,6 +36,7 @@ contains
 
       if (size(A, 2) /= size(B, 1)) then
          write (*, *) 'Incompatible Martices'
+         stop
       else
          do i = 1, size(A, 1)
             do j = 1, size(B, 2)
@@ -58,6 +60,7 @@ contains
 
       if (size(A, 2) /= size(B)) then
          write (*, *) 'Incompatible Martix-Vector Multiplication'
+         stop
       else
          do i = 1, size(A, 1)
             mulMatVec(i) = 0.0d0
@@ -80,6 +83,7 @@ contains
 
       if (size(AB, 2) /= size(b)) then
          write (*, *) 'Incompatible Band Martix-Vector Multiplication'
+         stop
       else
          n = size(AB, 2)
          do i = 1, n

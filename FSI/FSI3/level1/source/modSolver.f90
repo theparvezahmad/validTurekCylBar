@@ -70,20 +70,21 @@ contains
       double precision, allocatable, dimension(:) :: Xi, Xidd, Xii, Xti
 
       double precision :: tol, err
-      double precision, allocatable, dimension(:, :):: stepLoad
+      ! double precision, allocatable, dimension(:, :):: stepLoad
+      double precision::stepLoad
       integer, allocatable, dimension(:)::pivot
-      integer :: iLoad, cntIter, ok
+      integer :: iLoad, cntIter, ok, cnt
 
       character(len=30):: filename
       integer:: solnumber
       solnumber = 0
-      dt_ = Ct
+      dt_ = dt!Ct
 
-      allocate (ft(0:q - 1, nx + 2, ny + 2))
-      allocate (ux(nx + 2, ny + 2))
-      allocate (uy(nx + 2, ny + 2))
-      allocate (rho(nx + 2, ny + 2))
-      allocate (isn(nx + 2, ny + 2))
+      ! allocate (ft(0:q - 1, nx + 2, ny + 2))
+      ! allocate (ux(nx + 2, ny + 2))
+      ! allocate (uy(nx + 2, ny + 2))
+      ! allocate (rho(nx + 2, ny + 2))
+      ! allocate (isn(nx + 2, ny + 2))
 
       allocate (bounDofTopEl(0:degEl*size(topEl), 2))
       allocate (bounDofBottomEl(0:degEl*size(bottomEl), 2))
@@ -112,7 +113,7 @@ contains
       allocate (Xi(nDofBC), Xii(nDofBC), Xti(nDofBC), Xidd(nDof))
 
       allocate (PSItPointForce(nDofPerEl, nEl))
-      allocate (stepLoad(nDofPerEl, nEl))
+      ! allocate (stepLoad(nDofPerEl, nEl))
 
       XOld = 0.0d0
       XdOld = 0.0d0
@@ -130,7 +131,7 @@ contains
       X = 0.0d0
       ! t = tStart_
 
-      ! open (UNIT=11, file='dynamic.dat')
+      open (UNIT=11, file='../output/dynamic.dat')
       Fx = d0
       Fy = d0
       open (unit=10, file="../output/tRhoCdCl.dat")
@@ -140,12 +141,17 @@ contains
       nLdiag = coupleRange
       ldab = 2*nLdiag + nUdiag + 1
       ! topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
-      probeDof = nDofBC - int((0.5*nElx*degEl + 1)*nDofPerNode) + [1, 2]
+      probeDof = nDofBC - (nEly/2*degEl + 1)*nDofPerNode + [1, 2]
       !----------------------------------------------------------------------
-      call detectDeformedShape()
-      do t_ = 0, time_
-         !$omp parallel default(shared)
-         t = t_*Ct
+      t = tStart
+      cnt = 0
+      do while (t .lt. tEnd)
+
+         ! t = t_*Ct
+         cnt = cnt + 1
+         ! t = t + dt
+         t = cnt*dt
+         ! call calcMacroVarLBM()
 
          call calcMacroVarLBM()
 
@@ -168,75 +174,71 @@ contains
          !                      1, 3, 4, 5,&
          !                      1, 3, 10, 11,&
          !                      1, 3, 20, 30], [6, 4], order=[2, 1])
-         !===========commented for CFD only======start==============
-         ! call addDuplicateFields()!(surfForce, uniqSurfForce)
-         ! deallocate (surfForce)
-         !===========commented for CFD only======end================
+         call addDuplicateFields()!(surfForce, uniqSurfForce)
+         deallocate (surfForce)
          ! do i = 1, size(uniqSurfForce,1)
          !    uniqSurfForce(i,3)=1
          !    uniqSurfForce(i,4)=3*i
          !    ! write(*,*) uniqSurfForce(i,1),uniqSurfForce(i,2)
          ! end do
 
-         !===========commented for CFD only======start==============
-         ! call distSurfForce2Elem()!(uniqSurfForce, PSItPointForce)
-         ! deallocate (uniqSurfForce)
-         !===========commented for CFD only======end================
+         call distSurfForce2Elem()!(uniqSurfForce, PSItPointForce)
+         deallocate (uniqSurfForce)
+         ! call calcMgKgFg(PSItPointForce)
          ! write(*,*) tempSum
          ! write(*,*) sum(tempSum),sum(uniqSurfForce(:,3))
          ! stop
-         !===========commented for CFD only======start==============
-         ! do iLoad = 1, noOfLoadSteps
-         !    !loadVec=linspace(totalLoad/noOfLoadSteps,totalLoad,noOfLoadSteps)
-         !    !stepLoad=loadVec(iLoad)
-         !    stepLoad = PSItPointForce*iLoad/noOfLoadSteps
+         !==========================compDynRes=========================
+         do iLoad = 1, noOfLoadSteps
+            !loadVec=linspace(totalLoad/noOfLoadSteps,totalLoad,noOfLoadSteps)
+            !stepLoad=loadVec(iLoad)
+            stepLoad = totalLoad*iLoad/noOfLoadSteps
 
-         !    !Xi=zeros(nDofBC,1);
-         !    call calcMgKgFg(X, stepLoad, MgB, KgB, Fg)
-         !    !call calcMgKgFg(X, stepLoad)
-         !    !Xi=(a0*Mg + Kg)\(Fg + Mg*(a2*XdOld + a3*XddOld))
-         !    Xi = Fg + mulMatBVec(MgB, a2*XdOld + a3*XddOld, nUdiag, nLdiag)
-         !    Mtemp = a0*MgB + KgB
-         !    !call DGESV(nDofBC, 1, Mtemp, nDofBC, pivot, Xi, nDofBC, ok)
-         !    call DGBSV(nDofBC, nLdiag, nUdiag, 1, Mtemp, ldab, pivot, Xi, nDofBC, ok)
+            !Xi=zeros(nDofBC,1);
+            call calcMgKgFg(X, stepLoad, MgB, KgB, Fg)
+            !call calcMgKgFg(X, stepLoad)
+            !Xi=(a0*Mg + Kg)\(Fg + Mg*(a2*XdOld + a3*XddOld))
+            Xi = Fg + mulMatBVec(MgB, a2*XdOld + a3*XddOld, nUdiag, nLdiag)
+            Mtemp = a0*MgB + KgB
+            !call DGESV(nDofBC, 1, Mtemp, nDofBC, pivot, Xi, nDofBC, ok)
+            call DGBSV(nDofBC, nLdiag, nUdiag, 1, Mtemp, ldab, pivot, Xi, nDofBC, ok)
 
-         !    err = 1
-         !    tol = 1e-8
-         !    cntIter = 0
+            err = 1
+            tol = 1e-8
+            cntIter = 0
 
-         !    do while (err > tol)
-         !       cntIter = cntIter + 1
-         !       Xidd = a0*Xi - a2*XdOld - a3*XddOld
-         !       Xti = X + Xi
-         !       call calcMgKgFg(Xti, stepLoad, MgB, KgB, Fg)
-         !       !Xii=(a0*Mg + Kg)\(Fg - Mg*Xidd)
-         !       Xii = Fg - mulMatBVec(MgB, Xidd, nUdiag, nLdiag)
-         !       Mtemp = a0*MgB + KgB
-         !       !call DGESV(nDofBC, 1, Mtemp, nDofBC, pivot, Xii, nDofBC, ok)
-         !       call DGBSV(nDofBC, nLdiag, nUdiag, 1, Mtemp, ldab, pivot, Xii, nDofBC, ok)
-         !       Xi = Xi + Xii
-         !       err = norm2(Xii)/norm2(Xi + X)
-         !       if (cntIter == 10) exit
-         !    end do !iter loop ends
+            do while (err > tol)
+               cntIter = cntIter + 1
+               Xidd = a0*Xi - a2*XdOld - a3*XddOld
+               Xti = X + Xi
+               call calcMgKgFg(Xti, stepLoad, MgB, KgB, Fg)
+               !Xii=(a0*Mg + Kg)\(Fg - Mg*Xidd)
+               Xii = Fg - mulMatBVec(MgB, Xidd, nUdiag, nLdiag)
+               Mtemp = a0*MgB + KgB
+               !call DGESV(nDofBC, 1, Mtemp, nDofBC, pivot, Xii, nDofBC, ok)
+               call DGBSV(nDofBC, nLdiag, nUdiag, 1, Mtemp, ldab, pivot, Xii, nDofBC, ok)
+               Xi = Xi + Xii
+               err = norm2(Xii)/norm2(Xi + X)
+               if (cntIter == 10) exit
+            end do !iter loop ends
 
-         !    if (modulo(int(t/dt), 20) == 0) then
-         !       write (*, *) t, err, cntIter!, dateTime()
-         !    end if
+            if (modulo(int(t/dt), 20) == 0) then
+               write (*, *) t, err, cntIter!, dateTime()
+            end if
 
-         !    ! Res=(Mg*Xidd + Kg*Xii - Fg);!Residual
-         !    ! DeltaConvG(iLoad,1:3)=[Xii(topLeftPt) Res(topLeftPt) cntIter]; !Converged solution for the last load step
+            ! Res=(Mg*Xidd + Kg*Xii - Fg);!Residual
+            ! DeltaConvG(iLoad,1:3)=[Xii(topLeftPt) Res(topLeftPt) cntIter]; !Converged solution for the last load step
 
-         ! end do !iLoad loop ends
+         end do !iLoad loop ends
 
-         ! Xdd = a0*Xi - a2*XdOld - a3*XddOld
-         ! Xd = XdOld + a6*XddOld + a7*Xdd
-         ! X = X + Xi
+         Xdd = a0*Xi - a2*XdOld - a3*XddOld
+         Xd = XdOld + a6*XddOld + a7*Xdd
+         X = X + Xi
 
-         ! XOld = X
-         ! XdOld = Xd
-         ! XddOld = Xdd
-         ! write (11, '(3(E12.4,2X))') t, X(probeDof(1)), X(probeDof(2))
-         !===========commented for CFD only======end================
+         XOld = X
+         XdOld = Xd
+         XddOld = Xdd
+
          ! !Analytical solution
          ! Xa=inv(V)*inv(Mg_)*Fg_./Freq.^2.*(1-cos(Freq*t));!constant load
          ! Xa=V*Xa;
@@ -267,7 +269,7 @@ contains
       end do!Time loop Ends
 
       close (10)
-      ! close (11)
+      close (11)
 
    contains
       subroutine calcMacroVarLBM()
@@ -726,7 +728,8 @@ contains
          implicit none
 
          double precision, dimension(:), intent(in) :: DeltaG
-         double precision, dimension(:, :), intent(in) :: stepLoad
+         ! double precision, dimension(:, :), intent(in) :: stepLoad
+         double precision:: stepLoad
          double precision, allocatable, dimension(:, :), intent(out) :: KgB, MgB
          double precision, allocatable, dimension(:), intent(out) :: Fg
 
@@ -797,7 +800,6 @@ contains
                end if
             end do
          end do
-
          ! !Constant shear BC on top surface for Quadratic Lagrange
          ! for i=1:nElx
          ! F02(nDofPerEl-nDofPerNode*(degEl+1)+1:nDofPerEl,nEl-i+1)=Lz*a/6*T0*[1,0,4,0,1,0]';
@@ -890,8 +892,8 @@ contains
                   PSItPSI = rhoS*mulMat(PSIt, PSI) !Integrand for Me
                   Me = Me + tmp*Wt(j)*Wt(i)*PSItPSI !Summing up all Gauss Points
 
-                  ! fPSI = mulMatVec(PSIt, [stepLoad, 0.0d0])
-                  fPSI = stepLoad(:, iEl)
+                  fPSI = mulMatVec(PSIt, [0.0d0, stepLoad])
+                  ! fPSI = stepLoad(:, iEl)
                   F02 = F02 + tmp*Wt(j)*Wt(i)*fPSI
                end do
             end do
@@ -926,8 +928,9 @@ contains
 
                Fg(dofMapBC(iEl, i)) = Fg(dofMapBC(iEl, i)) + Fe(i)
             end do
-            !end
+
          end do
+
       end subroutine calcMgKgFg
 
       subroutine writeSoln(filename)

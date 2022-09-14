@@ -1,7 +1,8 @@
 FC=ifort #fortran compiler
+FFLAGS=-mkl -xCORE-AVX2# -qopenmp #-CB -traceback
 # FC=gfortran
-FFLAGS=-mkl -g -O2 -xCORE-AVX2 -qopenmp# -warn all
-# FFLAGS=-g
+# FFLAGS=-g -fopenmp #-CB -traceback
+# LIBS=-llapack -lblas
 #-mkl -fast
 #-warn all -check all -stand f18 
 # -g
