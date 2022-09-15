@@ -4,7 +4,6 @@ module solver
    use math
    use fem
    use lbm
-   use omp_lib
    implicit none
 
    double precision, allocatable, dimension(:, :):: ci
@@ -38,7 +37,7 @@ contains
       double precision, allocatable, dimension(:, :):: ux, uy, rho
       !====================================
       ! integer::a, ia, ja, i, j, k, m, n, p, cnt, t_
-      integer:: t_, cFSinteract
+      integer:: cFSinteract
       ! double precision:: t, tmp1, tmp2, tmp3, uPara_, uParaRamp_, ii, jj
       double precision:: Cd, Cl, rhoSum, Fx(avgSpan), Fy(avgSpan)
       ! double precision:: Fx(avgSpan), Fy(avgSpan), FxLocal, FyLocal
@@ -58,7 +57,8 @@ contains
 
       ! double precision, allocatable, dimension(:) :: tempSum
       !========================
-      double precision :: t, dt_!, tStart_, tEnd_, dt_
+      double precision :: t, dt, totTime!, tStart_, tEnd_, dt_
+      integer:: t_
       integer, dimension(2) :: probeDof
       external :: DGBSV
       !double precision, allocatable, dimension(:,:), intent(out) :: soln
@@ -70,21 +70,20 @@ contains
       double precision, allocatable, dimension(:) :: Xi, Xidd, Xii, Xti
 
       double precision :: tol, err
-      ! double precision, allocatable, dimension(:, :):: stepLoad
-      double precision::stepLoad
+      double precision, allocatable, dimension(:, :):: stepLoad
+      ! double precision::stepLoad
       integer, allocatable, dimension(:)::pivot
       integer :: iLoad, cntIter, ok, cnt
 
       character(len=30):: filename
       integer:: solnumber
       solnumber = 0
-      dt_ = dt!Ct
 
-      ! allocate (ft(0:q - 1, nx + 2, ny + 2))
-      ! allocate (ux(nx + 2, ny + 2))
-      ! allocate (uy(nx + 2, ny + 2))
-      ! allocate (rho(nx + 2, ny + 2))
-      ! allocate (isn(nx + 2, ny + 2))
+      allocate (ft(0:q - 1, nx + 2, ny + 2))
+      allocate (ux(nx + 2, ny + 2))
+      allocate (uy(nx + 2, ny + 2))
+      allocate (rho(nx + 2, ny + 2))
+      allocate (isn(nx + 2, ny + 2))
 
       allocate (bounDofTopEl(0:degEl*size(topEl), 2))
       allocate (bounDofBottomEl(0:degEl*size(bottomEl), 2))
@@ -96,14 +95,15 @@ contains
 
       allocate (bounCoord(degEl*(size(topEl) + size(bottomEl) + size(rightEl)) + 2, 2))
 
-      a0 = 1.0d0/(alpha*dt_**2.0d0)
-      a1 = beta/(alpha*dt_)
-      a2 = 1.0d0/(alpha*dt_)
+      dt = Ct
+      a0 = 1.0d0/(alpha*dt**2.0d0)
+      a1 = beta/(alpha*dt)
+      a2 = 1.0d0/(alpha*dt)
       a3 = (1.0d0/(2.0d0*alpha)) - 1.0d0
       a4 = (beta/alpha) - 1.0d0
-      a5 = (dt_/2.0d0)*((beta/alpha) - 2.0d0)
-      a6 = dt_*(1.0d0 - beta)
-      a7 = beta*dt_
+      a5 = (dt/2.0d0)*((beta/alpha) - 2.0d0)
+      a6 = dt*(1.0d0 - beta)
+      a7 = beta*dt
 
       allocate (Mtemp(nDofBC, nDofBC))
 
@@ -113,7 +113,7 @@ contains
       allocate (Xi(nDofBC), Xii(nDofBC), Xti(nDofBC), Xidd(nDof))
 
       allocate (PSItPointForce(nDofPerEl, nEl))
-      ! allocate (stepLoad(nDofPerEl, nEl))
+      allocate (stepLoad(nDofPerEl, nEl))
 
       XOld = 0.0d0
       XdOld = 0.0d0
@@ -131,11 +131,12 @@ contains
       X = 0.0d0
       ! t = tStart_
 
-      open (UNIT=11, file='../output/dynamic.dat')
       Fx = d0
       Fy = d0
-      open (unit=10, file="../output/tRhoCdCl.dat")
+      open (unit=10, file="../output/Fluid_tRhoCdCl.dat")
       write (10, *) "Variables=timeLBM,timeReal,rho,Cd,Cl"
+      open (UNIT=11, file='../output/Solid_tUxUy.dat')
+      write (11, *) "Variables=timeReal,ux,uy"
 
       nUdiag = coupleRange
       nLdiag = coupleRange
@@ -143,15 +144,15 @@ contains
       ! topLeftPt = nDofBC - (nElx*degEl + 1)*nDofPerNode + 1
       probeDof = nDofBC - (nEly/2*degEl + 1)*nDofPerNode + [1, 2]
       !----------------------------------------------------------------------
-      t = tStart
-      cnt = 0
-      do while (t .lt. tEnd)
 
-         ! t = t_*Ct
-         cnt = cnt + 1
-         ! t = t + dt
-         t = cnt*dt
-         ! call calcMacroVarLBM()
+      t = 0.0d0!tStart
+      t_ = 0
+      totTime = totTime_*Ct
+
+      do while (t .lt. totTime)
+
+         t_ = t_ + 1
+         t = t_*dt
 
          call calcMacroVarLBM()
 
@@ -166,7 +167,6 @@ contains
          call applyInletOutletBC2()
          !----------------------------------------------------------------------
          call applyObjWallBC_calcForceObj()!(cFSinteract, surfForce)
-         !$omp end parallel
          ! allocate(surfForce(6,4))
          ! surfForce = reshape([1, 3, 5, 6,&
          !                      1, 3, 3, 9,&
@@ -192,7 +192,8 @@ contains
          do iLoad = 1, noOfLoadSteps
             !loadVec=linspace(totalLoad/noOfLoadSteps,totalLoad,noOfLoadSteps)
             !stepLoad=loadVec(iLoad)
-            stepLoad = totalLoad*iLoad/noOfLoadSteps
+            ! stepLoad = totalLoad*iLoad/noOfLoadSteps
+            stepLoad = PSItPointForce*iLoad/noOfLoadSteps
 
             !Xi=zeros(nDofBC,1);
             call calcMgKgFg(X, stepLoad, MgB, KgB, Fg)
@@ -258,7 +259,7 @@ contains
             !write (11, '(I8,6(3X,F10.6))') ts, ux(150, 201), uy(150, 201), ux(200, 250), uy(200, 250), ux(250, 201), uy(250, 201)
          end if
          !----------------------------------------------------------------------
-         if (t_ .le. time_ .and. mod(t_, (time_/(noOfSnaps - 1))) .eq. 0) then
+         if (t_ .le. totTime_ .and. mod(t_, (totTime_/(noOfSnaps - 1))) .eq. 0) then
 
             solnumber = solnumber + 1
             write (filename, '(a,i3.3,a)') "../output/snap", solnumber, ".dat"
@@ -279,7 +280,6 @@ contains
          double precision::tmp1, tmp2, tmp3, tmp4
          rhoSum = 0.0d0
 
-         !$omp do private(j) reduction(+: rhoSum)
          do j = 2, ny + 1
             do i = 2, nx + 1
                tmp1 = d0
@@ -298,7 +298,6 @@ contains
                rhoSum = rhoSum + tmp1
             end do
          end do
-         !$omp end do
       end subroutine calcMacroVarLBM
 
       subroutine collide()
@@ -307,7 +306,6 @@ contains
          integer::a, i, j
          double precision::tmp1, tmp2, feq
 
-         !$omp do private(j)
          do j = 2, ny + 1
             do i = 2, nx + 1
                do a = 0, q - 1
@@ -318,7 +316,6 @@ contains
                end do
             end do
          end do
-         !$omp end do
       end subroutine collide
 
       subroutine stream()
@@ -326,7 +323,6 @@ contains
 
          integer::a, i, j, ia, ja
 
-         !$omp do private(j)
          do j = 2, ny + 1
             do i = 2, nx + 1 !Streaming post-collision
                do a = 0, q - 1
@@ -339,7 +335,6 @@ contains
                end do
             end do
          end do
-         !$omp end do
       end subroutine stream
 
       subroutine applyInletOutletBC2()
@@ -349,7 +344,6 @@ contains
          double precision::uPara_, uParaRamp_, tmp1, tmp2
          tmp1 = 1.0d0/(ny**2.0d0)
 
-         !$omp do private(j)
          do j = 2, ny + 1
             i = 2
             uPara_ = 6.0d0*uMean_*(ny - (j - 1.5))*(j - 1.5)*tmp1; 
@@ -363,8 +357,7 @@ contains
             f(5, i, j) = f(7, i, j) - (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*rho(i, j)*uParaRamp_)
             f(8, i, j) = f(6, i, j) + (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*rho(i, j)*uParaRamp_)
          end do
-         !$omp end do
-         !$omp do private(j)
+
          do j = 2, ny + 1
             i = nx + 1
             ux(i, j) = (f(0, i, j) + f(2, i, j) + f(4, i, j) + 2*(f(1, i, j) + f(5, i, j) + f(8, i, j)))/rhoF_ - 1
@@ -372,7 +365,7 @@ contains
             f(6, i, j) = f(8, i, j) - 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*ux(i, j))
             f(7, i, j) = f(5, i, j) + 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*ux(i, j))
          end do
-         !$omp end do
+
       end subroutine applyInletOutletBC2
 
       subroutine detectDeformedShape()!(isn)
@@ -508,7 +501,6 @@ contains
          Fy(avgSpan) = d0
          cFSinteract = 0
 
-         !$omp do private(j) reduction(+: Fx,Fy)
          do j = 2, ny + 1
             do i = 2, nx + 1 !BC
                if (isn(i, j) .eq. 0) then
@@ -552,7 +544,7 @@ contains
                end if
             end do
          end do
-         !$omp end do
+
          ! allocate (surfForce(cFSinteract, 4))
          ! surfForce = surfForce_(1:cFSinteract, :)
 
@@ -728,8 +720,8 @@ contains
          implicit none
 
          double precision, dimension(:), intent(in) :: DeltaG
-         ! double precision, dimension(:, :), intent(in) :: stepLoad
-         double precision:: stepLoad
+         double precision, dimension(:, :), intent(in) :: stepLoad
+         ! double precision:: stepLoad
          double precision, allocatable, dimension(:, :), intent(out) :: KgB, MgB
          double precision, allocatable, dimension(:), intent(out) :: Fg
 
@@ -892,8 +884,8 @@ contains
                   PSItPSI = rhoS*mulMat(PSIt, PSI) !Integrand for Me
                   Me = Me + tmp*Wt(j)*Wt(i)*PSItPSI !Summing up all Gauss Points
 
-                  fPSI = mulMatVec(PSIt, [0.0d0, stepLoad])
-                  ! fPSI = stepLoad(:, iEl)
+                  ! fPSI = mulMatVec(PSIt, [0.0d0, stepLoad])
+                  fPSI = stepLoad(:, iEl)
                   F02 = F02 + tmp*Wt(j)*Wt(i)*fPSI
                end do
             end do

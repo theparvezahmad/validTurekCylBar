@@ -6,13 +6,8 @@ program turekFSI
    write (*, *) '======================================================'
    write (*, *) 'Program started at :', dateTime()
 
-   ! write (*, *) 'Total active threads:', omp_get_max_threads()
-   ! !$omp parallel
-   ! write (*, *) 'Hello from process:', omp_get_thread_num()
-   ! !$omp end parallel
-
-   call setupLBMvars()
    call setupD2Q9(ci, wi, kb)
+   call setupLBMvars()
    call initProbDist()
 
    call setupBC(dofBC)

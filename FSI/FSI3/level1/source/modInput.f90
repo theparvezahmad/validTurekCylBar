@@ -6,7 +6,7 @@ module input
       dim = 2, &
       chanH_ = 82, &
       q = 9, &
-      time_ = 100000, &
+      totTime_ = 100000, &
       noOfSnaps = 3, &
       dispFreq = 100, &
       avgSpan = 2
@@ -25,8 +25,8 @@ module input
       yc = 0.2d0
 
    double precision, parameter :: &
-      ! E = uMean**2.0d0*1.4d6, &
-      E = 1.4d6, &
+      E = uMean**2.0d0*1.4d6, &
+      ! E = 1.4d6, &
       v = 0.4d0, &
       rhoS = 1.0d3, &
       ! Lx = 0.02d0, &
@@ -37,17 +37,16 @@ module input
    integer, parameter :: &
       degEl = 2, &
       flag = 0, &
-      nElx = 70, &
+      nElx = 6, &
       nEly = 4, &
       nDofPerNode = 2
 
    double precision, parameter :: &
       alpha = 0.25d0, & !Newmark Parameters
-      beta = 0.5d0, &
-      tStart = 0.0d0, &
-      tEnd = 10.0d0, &
-      dt = 0.02d0
-
+      beta = 0.5d0
+   ! tStart = 0.0d0, &
+   ! tEnd = 10.0d0, &
+   ! dt = 0.02d0
    integer, parameter ::          noOfLoadSteps = 1
 
 contains
