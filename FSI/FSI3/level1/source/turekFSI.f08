@@ -6,13 +6,13 @@ program turekFSI
    write (*, *) '======================================================'
    write (*, *) 'Program started at :', dateTime()
 
-   call setupD2Q9(ci, wi, kb)
+   call setupD2Q9()
    call setupLBMvars()
    call initProbDist()
 
-   call setupBC(dofBC)
+   call setupBC()
    call setupFEMvars()
-   call setupElemMap(dofMapBC, coupleRange)
+   call setupElemMap()
 
    call demarcateElem()!(topEl, bottomEl, rightEl, leftEl)
    call undeformedInterface()!(refBounTopEl, refBounBottomEl, refBounRightEl)

@@ -4,13 +4,14 @@ SRC_DIR := ../source
 # SRCS := $(shell find $(SRC_DIR) -name '*.f90')
 # SRCS := $(wildcard $(SRC_DIR)/*.f90)
 SRCS := \
-$(SRC_DIR)/modInput.f90 \
-$(SRC_DIR)/modFEM.f90 \
-$(SRC_DIR)/modMath.f90 \
-$(SRC_DIR)/modLBM.f90 \
-$(SRC_DIR)/modSolver.f90 \
-$(SRC_DIR)/turekFSI.f90 
-OBJS := ${SRCS:$(SRC_DIR)/%.f90=%.o} #substitute .f90 with .o
+$(SRC_DIR)/modInput.f08 \
+$(SRC_DIR)/modFEM.f08 \
+$(SRC_DIR)/modMath.f08 \
+$(SRC_DIR)/modLBM.f08 \
+$(SRC_DIR)/modModel.f08 \
+$(SRC_DIR)/modSolver.f08 \
+$(SRC_DIR)/turekFSI.f08 
+OBJS := ${SRCS:$(SRC_DIR)/%.f08=%.o} #substitute .f90 with .o
 
 # FC=ifort #fortran compiler
 # FFLAGS=-mkl -xCORE-AVX2# -qopenmp #-CB -traceback
@@ -23,7 +24,7 @@ LIBS := -llapack -lblas
 $(TARGET): $(OBJS)
 	$(FC) $(FFLAGS) -o $@ $(OBJS) $(LIBS)
 
-%.o: $(SRC_DIR)/%.f90 #wildcard rule, creation of *.o depends on *.f90
+%.o: $(SRC_DIR)/%.f08 #wildcard rule, creation of *.o depends on *.f90
 	$(FC) $(FFLAGS) -o $@ -c $< $(LIBS)
 
 .PHONY: clean

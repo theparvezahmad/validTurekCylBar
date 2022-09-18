@@ -1,6 +1,6 @@
 module input
    implicit none
-   ! public
+   public
 
    integer, parameter:: &
       dim = 2, &
@@ -49,12 +49,14 @@ module input
    ! dt = 0.02d0
    integer, parameter ::          noOfLoadSteps = 1
 
+   integer, allocatable, dimension(:), protected :: dofBC
+
 contains
 
-   subroutine setupBC(dofBC)
+   subroutine setupBC()
       implicit none
       integer :: i
-      integer, allocatable, dimension(:), intent(out) :: dofBC
+      ! integer, allocatable, dimension(:), intent(out) :: dofBC
 
       allocate (dofBC((nEly*degEl + 1)*nDofPerNode))
 
