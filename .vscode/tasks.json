@@ -1,13 +1,13 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "make",
-            "type": "shell",
-            "command": "make",
-            "options": {
-                "cwd": "${workspaceRoot}/FSI/FSI3/level1/source"
-            }
-        }
-    ]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "make",
+      "type": "shell",
+      "command": "make",
+      "options": {
+        "cwd": "${workspaceRoot}/FSI/FSI3/level1/build"
+      }
+    }
+  ]
 }

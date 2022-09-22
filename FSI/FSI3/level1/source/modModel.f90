@@ -1,307 +1,307 @@
 module model
 
-   use input
-   use math
-   use fem
-   use lbm
-   implicit none
-   public
+  use input
+  use math
+  use fem
+  use lbm
+  implicit none
+  public
 
-   integer, protected::nx, ny
-   double precision, protected:: Clen, Crho, Ct, Cnu, CVel, CFor, tau, invTau
-   double precision, protected:: nu_, uMean_, xc_, yc_, dia_, chanL_, barL_, barH_
+  integer, protected::nx, ny
+  double precision, protected:: Clen, Crho, Ct, Cnu, CVel, CFor, tau, invTau
+  double precision, protected:: nu_, uMean_, xc_, yc_, dia_, chanL_, barL_, barH_
 
-   double precision, allocatable, dimension(:, :, :):: f
+  double precision, allocatable, dimension(:, :, :):: f
 
-   integer, protected:: nEl, nNodesPerEl, nNodes, nDofPerEl, nDof, nDofBC
-   double precision, protected:: lenElx, lenEly, lenElx_, lenEly_
+  integer, protected:: nEl, nNodesPerEl, nNodes, nDofPerEl, nDof, nDofBC
+  double precision, protected:: lenElx, lenEly, lenElx_, lenEly_
 
-   ! integer:: cnt, k, m, n, p
-   integer, allocatable, dimension(:, :), protected :: dofMapBC
-   integer, protected:: coupleRange
-   ! integer, allocatable, dimension(:) :: dofBC
+  ! integer:: cnt, k, m, n, p
+  integer, allocatable, dimension(:, :), protected :: dofMapBC
+  integer, protected:: coupleRange
+  ! integer, allocatable, dimension(:) :: dofBC
 
-   integer, allocatable, dimension(:), protected::bottomEl, topEl, leftEl, rightEl
-   double precision, allocatable, dimension(:, :), protected::refBounTopEl, refBounBottomEl, refBounRightEl
+  integer, allocatable, dimension(:), protected::bottomEl, topEl, leftEl, rightEl
+  double precision, allocatable, dimension(:, :), protected::refBounTopEl, refBounBottomEl, refBounRightEl
 
 contains
 
-   subroutine setupLBMvars()
-      implicit none
+  subroutine setupLBMvars()
+    implicit none
 
-      Clen = chanH/chanH_
-      Crho = rhoF/rhoF_
-      Ct = dia/uMean*0.002d0 !Time Period of fundamental node
-      Cnu = Clen**2.0d0/Ct
-      CVel = Clen/Ct
-      ! CFor = Crho*Clen**4.0d0*Ct**(-2.0d0)
-      CFor = Crho*Clen**3.0d0*Ct**(-2.0d0)
+    Clen = chanH/chanH_
+    Crho = rhoF/rhoF_
+    Ct = dia/uMean*0.002d0 !Time Period of fundamental node
+    Cnu = Clen**2.0d0/Ct
+    CVel = Clen/Ct
+    ! CFor = Crho*Clen**4.0d0*Ct**(-2.0d0)
+    CFor = Crho*Clen**3.0d0*Ct**(-2.0d0)
 
-      !===Other LBM parameters===
-      chanL_ = chanL/Clen
-      dia_ = dia/Clen
-      xc_ = xc/Clen + 1.5d0
-      yc_ = yc/Clen + 1.5d0
-      barL_ = barL/Clen
-      barH_ = barH/Clen
-      nx = int(chanL_)
-      ny = chanH_
-      nu_ = nu/Cnu
-      uMean_ = uMean/CVel
-      tau = 3*nu_ + 0.5d0
-      invTau = 1.0d0/tau
+    !===Other LBM parameters===
+    chanL_ = chanL/Clen
+    dia_ = dia/Clen
+    xc_ = xc/Clen + 1.5d0
+    yc_ = yc/Clen + 1.5d0
+    barL_ = barL/Clen
+    barH_ = barH/Clen
+    nx = int(chanL_)
+    ny = chanH_
+    nu_ = nu/Cnu
+    uMean_ = uMean/CVel
+    tau = 3*nu_ + 0.5d0
+    invTau = 1.0d0/tau
 
-      write (*, *) 'Clen = ', Clen
-      write (*, *) 'Crho = ', Crho
-      write (*, *) 'Ct   = ', Ct
-      write (*, *) 'CVel = ', CVel
-      write (*, *) 'tau  = ', tau
-      write (*, *) 'uMax_ = ', 1.5d0*uMean_
-      write (*, *) 'Re_SI = ', uMean*dia/nu
-      write (*, *) 'Re_LBM = ', uMean_*dia_/nu_
+    write (*, *) 'Clen = ', Clen
+    write (*, *) 'Crho = ', Crho
+    write (*, *) 'Ct   = ', Ct
+    write (*, *) 'CVel = ', CVel
+    write (*, *) 'tau  = ', tau
+    write (*, *) 'uMax_ = ', 1.5d0*uMean_
+    write (*, *) 'Re_SI = ', uMean*dia/nu
+    write (*, *) 'Re_LBM = ', uMean_*dia_/nu_
 
-   end subroutine setupLBMvars
+  end subroutine setupLBMvars
 
-   subroutine setupFEMvars()
-      implicit none
+  subroutine setupFEMvars()
+    implicit none
 
-      nEl = nElx*nEly
-      nNodesPerEl = (degEl + 1)**2 - flag*(degEl - 1)**2 !nodes per element
-      nNodes = (nElx*degEl + 1)*(nEly*degEl + 1) - flag*(nElx*nEly)*(degEl - 1)**2 !total no of global nodes
-      nDofPerEl = nDofPerNode*nNodesPerEl
-      nDof = nDofPerNode*nNodes !total DOF including BC DOFs
-      nDofBC = nDof - size(dofBC) !!total DOF excluding BC DOFs
-      lenElx = barL/nElx
-      lenEly = barH/nEly
-      lenElx_ = barL_/nElx
-      lenEly_ = barH_/nEly
-   end subroutine setupFEMvars
+    nEl = nElx*nEly
+    nNodesPerEl = (degEl + 1)**2 - flag*(degEl - 1)**2 !nodes per element
+    nNodes = (nElx*degEl + 1)*(nEly*degEl + 1) - flag*(nElx*nEly)*(degEl - 1)**2 !total no of global nodes
+    nDofPerEl = nDofPerNode*nNodesPerEl
+    nDof = nDofPerNode*nNodes !total DOF including BC DOFs
+    nDofBC = nDof - size(dofBC) !!total DOF excluding BC DOFs
+    lenElx = barL/nElx
+    lenEly = barH/nEly
+    lenElx_ = barL_/nElx
+    lenEly_ = barH_/nEly
+  end subroutine setupFEMvars
 
-   subroutine initProbDist()
-      implicit none
+  subroutine initProbDist()
+    implicit none
 
-      integer:: i, j, a
-      double precision:: tmp1, tmp2, uPara_
+    integer:: i, j, a
+    double precision:: tmp1, tmp2, uPara_
 
-      allocate (f(0:q - 1, nx + 2, ny + 2))
+    allocate (f(0:q - 1, nx + 2, ny + 2))
 
-      do i = 1, nx + 2
-         do j = 1, ny + 2
-            uPara_ = d0! 6*uMean_*(ny - (j - 1.5))*(j - 1.5)/ny**2;
-            do a = 0, q - 1
-               tmp1 = uPara_*ci(a, 1)
-               tmp2 = uPara_*uPara_
-               f(a, i, j) = wi(a)*rhoF_*(1.0 + 3.0*tmp1 + 4.5*tmp1*tmp1 - 1.5*tmp2)
-            end do
-         end do
+    do i = 1, nx + 2
+      do j = 1, ny + 2
+        uPara_ = d0! 6*uMean_*(ny - (j - 1.5))*(j - 1.5)/ny**2;
+        do a = 0, q - 1
+          tmp1 = uPara_*ci(a, 1)
+          tmp2 = uPara_*uPara_
+          f(a, i, j) = wi(a)*rhoF_*(1.0 + 3.0*tmp1 + 4.5*tmp1*tmp1 - 1.5*tmp2)
+        end do
       end do
+    end do
 
-   end subroutine initProbDist
+  end subroutine initProbDist
 
-   subroutine setupElemMap()
-      implicit none
-      ! Arguments declarations
-      ! integer, allocatable, dimension(:, :), intent(out) :: dofMapBC_
-      ! integer, intent(out) :: coupleRange_
-      integer, allocatable, dimension(:, :) :: dofMap
-      integer, allocatable, dimension(:) :: cntS, dofBCcopy
-      integer :: iEl, nNd
-      integer :: cnt, i, j, k, p, m, n
-      !
-      !global degEl flag nEl nElx nEly dofBC nDofPerNode nDofPerEl
-      !Node Map relating global DOF to local DOF for all elements
-      !m2f: dofMap=zeros(nEl,nDofPerEl)
-      allocate (dofMap(nEl, nDofPerEl))
-      allocate (dofMapBC(nEl, nDofPerEl))
-      allocate (dofBCcopy(size(dofBC)))
+  subroutine setupElemMap()
+    implicit none
+    ! Arguments declarations
+    ! integer, allocatable, dimension(:, :), intent(out) :: dofMapBC_
+    ! integer, intent(out) :: coupleRange_
+    integer, allocatable, dimension(:, :) :: dofMap
+    integer, allocatable, dimension(:) :: cntS, dofBCcopy
+    integer :: iEl, nNd
+    integer :: cnt, i, j, k, p, m, n
+    !
+    !global degEl flag nEl nElx nEly dofBC nDofPerNode nDofPerEl
+    !Node Map relating global DOF to local DOF for all elements
+    !m2f: dofMap=zeros(nEl,nDofPerEl)
+    allocate (dofMap(nEl, nDofPerEl))
+    allocate (dofMapBC(nEl, nDofPerEl))
+    allocate (dofBCcopy(size(dofBC)))
 
-      dofBCcopy = dofBC
+    dofBCcopy = dofBC
 
-      cnt = 1
-      allocate (cntS(nEl))
-      cntS = 0
+    cnt = 1
+    allocate (cntS(nEl))
+    cntS = 0
 
-      do n = 0, nElx - 1
-         if (n > 0 .and. n < nElx) then
-            cnt = cnt - (nEly*degEl + 1)*nDofPerNode !to account for common nodes along y
-         end if
-         do i = 0, degEl
-            do m = 0, nEly - 1
-               if (m > 0 .and. m < nEly) then
-                  cnt = cnt - nDofPerNode !to account for common nodes along x
-               end if
-               do j = 0, degEl
-                  iEl = (m + 1) + nEly*n !global element number
-                  if (flag == 1 .and. i > 0 .and. i < degEl .and. j > 0 .and. j < degEl) then
-                     cntS(iEl) = cntS(iEl) + 1 !count interior nodes for a given element
-                     cycle !skip interior node for serendipity element
-                  end if
-                  nNd = (j + 1) + (degEl + 1)*i - cntS(iEl) !local node number for a given element
-                  !dofMap(iEl,[2*nNd-1 2*nNd])=[ cnt,cnt+1 ] !allot global nodal dof
-                  dofMap(iEl, 2*nNd - 1) = cnt
-                  dofMap(iEl, 2*nNd) = cnt + 1
-                  cnt = cnt + nDofPerNode
-               end do
-            end do
-         end do
-      end do
-
-      coupleRange = dofMap(1, nDofPerEl) - dofMap(1, 1)
-
-      !Replacing BC nodes with zero and renumbering the DOF map(works even for unordered dofBC)
-      dofMapBC = dofMap
-      do k = 1, size(dofBCcopy)!for each BC node
-         do i = 1, nEl!for each element
-            do j = 1, nDofPerEl!for each DOF
-               if (dofMapBC(i, j) == dofBCcopy(k)) then
-                  dofMapBC(i, j) = 0 !set BC DOF to zero
-               end if
-               if (dofMapBC(i, j) > dofBCcopy(k)) then
-                  dofMapBC(i, j) = dofMapBC(i, j) - 1 !decrement global DOF numbering
-               end if
-            end do
-         end do
-
-         do p = 1, size(dofBCcopy)!helps work with unordered dofBC
-            if (dofBCcopy(p) > dofBCcopy(k)) then
-               dofBCcopy(p) = dofBCcopy(p) - 1
-            end if
-         end do
-
-      end do
-
-   end subroutine setupElemMap
-
-   subroutine demarcateElem()!(bottomEl, topEl, rightEl, leftEl)
-      implicit none
-
-      ! integer, allocatable, dimension(:), intent(out) :: bottomEl, topEl, rightEl, leftEl
-      integer:: k, cnt
-
-      allocate (bottomEl(nElx))
-      allocate (topEl(nElx))
-      allocate (leftEl(nEly))
-      allocate (rightEl(nEly))
-
-      cnt = 1
-      do k = 1, nEl, nEly
-         bottomEl(cnt) = k
-         cnt = cnt + 1
-      end do
-
-      cnt = 1
-      do k = nEly, nEl, nEly
-         topEl(cnt) = k
-         cnt = cnt + 1
-      end do
-
-      cnt = 1
-      do k = 1, nEly
-         leftEl(cnt) = k
-         cnt = cnt + 1
-      end do
-
-      cnt = 1
-      do k = nEly*(nElx - 1) + 1, nEl
-         rightEl(cnt) = k
-         cnt = cnt + 1
-      end do
-
-   end subroutine demarcateElem
-
-   subroutine undeformedInterface()!(refBounTopEl, refBounBottomEl, refBounRightEl)
-      implicit none
-
-      ! double precision, allocatable, dimension(:, :), intent(out) :: refBounTopEl, refBounBottomEl, refBounRightEl
-      integer::k, m
-
-      allocate (refBounTopEl(0:degEl*size(topEl), 2))
-      allocate (refBounBottomEl(0:degEl*size(bottomEl), 2))
-      allocate (refBounRightEl(0:degEl*size(rightEl), 2))
-
-      refBounTopEl(0, 1:2) = [xc_ + 0.5d0*dia_, yc_ + 0.5d0*barH_]
-      do k = 1, size(topEl)
-         do m = 0, degEl - 1
-            refBounTopEl(degEl*k - m, 1) = refBounTopEl(0, 1) + (k - dble(m)/degEl)*lenElx_
-            refBounTopEl(degEl*k - m, 2) = refBounTopEl(0, 2)
-         end do
-
-         ! refBounTopEl(2*k-1, 1) = refBounTopEl(0, 1) + (k-0.5d0)*lenElx_
-         ! refBounTopEl(2*k  , 1) = refBounTopEl(0, 1) + k*lenElx_
-         ! refBounTopEl(2*k-1, 2) = refBounTopEl(0, 2)
-         ! refBounTopEl(2*k  , 2) = refBounTopEl(0, 2)
-      end do
-
-      refBounBottomEl(0, 1:2) = [xc_ + 0.5d0*dia_, yc_ - 0.5d0*barH_]
-      do k = 1, size(bottomEl)
-         do m = 0, degEl - 1
-            refBounBottomEl(degEl*k - m, 1) = refBounBottomEl(0, 1) + (k - dble(m)/degEl)*lenElx_
-            refBounBottomEl(degEl*k - m, 2) = refBounBottomEl(0, 2)
-         end do
-         ! refBounBottomEl(2*k-1, 1) = refBounBottomEl(0, 1) + (k-0.5d0)*lenElx_
-         ! refBounBottomEl(2*k  , 1) = refBounBottomEl(0, 1) + k*lenElx_
-         ! refBounBottomEl(2*k-1, 2) = refBounBottomEl(0, 2)
-         ! refBounBottomEl(2*k  , 2) = refBounBottomEl(0, 2)
-      end do
-
-      refBounRightEl(0, 1:2) = [xc_ + 0.5d0*dia_ + barL_, yc_ - 0.5d0*barH_]
-      do k = 1, size(rightEl)
-         do m = 0, degEl - 1
-            refBounRightEl(degEl*k - m, 1) = refBounRightEl(0, 1)
-            refBounRightEl(degEl*k - m, 2) = refBounRightEl(0, 2) + (k - dble(m)/degEl)*lenEly_
-         end do
-         ! refBounRightEl(2*k-1, 1) = refBounRightEl(0, 1)
-         ! refBounRightEl(2*k  , 1) = refBounRightEl(0, 1)
-         ! refBounRightEl(2*k-1, 2) = refBounRightEl(0, 2) + (k-0.5d0)*lenEly_
-         ! refBounRightEl(2*k  , 2) = refBounRightEl(0, 2) + k*lenEly_
-      end do
-
-   end subroutine undeformedInterface
-
-   function dateTime()
-
-      implicit none
-      character(len=30)::dateTime
-      character(len=10):: ampm
-      integer:: d, h, m, n, s, y, mm, values(8)
-      character(len=3), parameter, dimension(12) :: &
-         month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-      call date_and_time(values=values)
-
-      y = values(1)
-      m = values(2)
-      d = values(3)
-      h = values(5)
-      n = values(6)
-      s = values(7)
-      mm = values(8)
-
-      if (h < 12) then
-         ampm = 'AM'
-      elseif (h == 12) then
-         if (n == 0 .and. s == 0) then
-            ampm = 'Noon'
-         else
-            ampm = 'PM'
-         end if
-      else
-         h = h - 12
-         if (h < 12) then
-            ampm = 'PM'
-         elseif (h == 12) then
-            if (n == 0 .and. s == 0) then
-               ampm = 'Midnight'
-            else
-               ampm = 'AM'
-            end if
-         end if
+    do n = 0, nElx - 1
+      if (n > 0 .and. n < nElx) then
+        cnt = cnt - (nEly*degEl + 1)*nDofPerNode !to account for common nodes along y
       end if
+      do i = 0, degEl
+        do m = 0, nEly - 1
+          if (m > 0 .and. m < nEly) then
+            cnt = cnt - nDofPerNode !to account for common nodes along x
+          end if
+          do j = 0, degEl
+            iEl = (m + 1) + nEly*n !global element number
+            if (flag == 1 .and. i > 0 .and. i < degEl .and. j > 0 .and. j < degEl) then
+              cntS(iEl) = cntS(iEl) + 1 !count interior nodes for a given element
+              cycle !skip interior node for serendipity element
+            end if
+            nNd = (j + 1) + (degEl + 1)*i - cntS(iEl) !local node number for a given element
+            !dofMap(iEl,[2*nNd-1 2*nNd])=[ cnt,cnt+1 ] !allot global nodal dof
+            dofMap(iEl, 2*nNd - 1) = cnt
+            dofMap(iEl, 2*nNd) = cnt + 1
+            cnt = cnt + nDofPerNode
+          end do
+        end do
+      end do
+    end do
 
-      write (dateTime, '(i2,1x,a,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)') &
-         d, trim(month(m)), y, h, ':', n, ':', s, '.', mm, trim(ampm)
+    coupleRange = dofMap(1, nDofPerEl) - dofMap(1, 1)
 
-   end function dateTime
+    !Replacing BC nodes with zero and renumbering the DOF map(works even for unordered dofBC)
+    dofMapBC = dofMap
+    do k = 1, size(dofBCcopy)!for each BC node
+      do i = 1, nEl!for each element
+        do j = 1, nDofPerEl!for each DOF
+          if (dofMapBC(i, j) == dofBCcopy(k)) then
+            dofMapBC(i, j) = 0 !set BC DOF to zero
+          end if
+          if (dofMapBC(i, j) > dofBCcopy(k)) then
+            dofMapBC(i, j) = dofMapBC(i, j) - 1 !decrement global DOF numbering
+          end if
+        end do
+      end do
+
+      do p = 1, size(dofBCcopy)!helps work with unordered dofBC
+        if (dofBCcopy(p) > dofBCcopy(k)) then
+          dofBCcopy(p) = dofBCcopy(p) - 1
+        end if
+      end do
+
+    end do
+
+  end subroutine setupElemMap
+
+  subroutine demarcateElem()!(bottomEl, topEl, rightEl, leftEl)
+    implicit none
+
+    ! integer, allocatable, dimension(:), intent(out) :: bottomEl, topEl, rightEl, leftEl
+    integer:: k, cnt
+
+    allocate (bottomEl(nElx))
+    allocate (topEl(nElx))
+    allocate (leftEl(nEly))
+    allocate (rightEl(nEly))
+
+    cnt = 1
+    do k = 1, nEl, nEly
+      bottomEl(cnt) = k
+      cnt = cnt + 1
+    end do
+
+    cnt = 1
+    do k = nEly, nEl, nEly
+      topEl(cnt) = k
+      cnt = cnt + 1
+    end do
+
+    cnt = 1
+    do k = 1, nEly
+      leftEl(cnt) = k
+      cnt = cnt + 1
+    end do
+
+    cnt = 1
+    do k = nEly*(nElx - 1) + 1, nEl
+      rightEl(cnt) = k
+      cnt = cnt + 1
+    end do
+
+  end subroutine demarcateElem
+
+  subroutine undeformedInterface()!(refBounTopEl, refBounBottomEl, refBounRightEl)
+    implicit none
+
+    ! double precision, allocatable, dimension(:, :), intent(out) :: refBounTopEl, refBounBottomEl, refBounRightEl
+    integer::k, m
+
+    allocate (refBounTopEl(0:degEl*size(topEl), 2))
+    allocate (refBounBottomEl(0:degEl*size(bottomEl), 2))
+    allocate (refBounRightEl(0:degEl*size(rightEl), 2))
+
+    refBounTopEl(0, 1:2) = [xc_ + 0.5d0*dia_, yc_ + 0.5d0*barH_]
+    do k = 1, size(topEl)
+      do m = 0, degEl - 1
+        refBounTopEl(degEl*k - m, 1) = refBounTopEl(0, 1) + (k - dble(m)/degEl)*lenElx_
+        refBounTopEl(degEl*k - m, 2) = refBounTopEl(0, 2)
+      end do
+
+      ! refBounTopEl(2*k-1, 1) = refBounTopEl(0, 1) + (k-0.5d0)*lenElx_
+      ! refBounTopEl(2*k  , 1) = refBounTopEl(0, 1) + k*lenElx_
+      ! refBounTopEl(2*k-1, 2) = refBounTopEl(0, 2)
+      ! refBounTopEl(2*k  , 2) = refBounTopEl(0, 2)
+    end do
+
+    refBounBottomEl(0, 1:2) = [xc_ + 0.5d0*dia_, yc_ - 0.5d0*barH_]
+    do k = 1, size(bottomEl)
+      do m = 0, degEl - 1
+        refBounBottomEl(degEl*k - m, 1) = refBounBottomEl(0, 1) + (k - dble(m)/degEl)*lenElx_
+        refBounBottomEl(degEl*k - m, 2) = refBounBottomEl(0, 2)
+      end do
+      ! refBounBottomEl(2*k-1, 1) = refBounBottomEl(0, 1) + (k-0.5d0)*lenElx_
+      ! refBounBottomEl(2*k  , 1) = refBounBottomEl(0, 1) + k*lenElx_
+      ! refBounBottomEl(2*k-1, 2) = refBounBottomEl(0, 2)
+      ! refBounBottomEl(2*k  , 2) = refBounBottomEl(0, 2)
+    end do
+
+    refBounRightEl(0, 1:2) = [xc_ + 0.5d0*dia_ + barL_, yc_ - 0.5d0*barH_]
+    do k = 1, size(rightEl)
+      do m = 0, degEl - 1
+        refBounRightEl(degEl*k - m, 1) = refBounRightEl(0, 1)
+        refBounRightEl(degEl*k - m, 2) = refBounRightEl(0, 2) + (k - dble(m)/degEl)*lenEly_
+      end do
+      ! refBounRightEl(2*k-1, 1) = refBounRightEl(0, 1)
+      ! refBounRightEl(2*k  , 1) = refBounRightEl(0, 1)
+      ! refBounRightEl(2*k-1, 2) = refBounRightEl(0, 2) + (k-0.5d0)*lenEly_
+      ! refBounRightEl(2*k  , 2) = refBounRightEl(0, 2) + k*lenEly_
+    end do
+
+  end subroutine undeformedInterface
+
+  function dateTime()
+
+    implicit none
+    character(len=30)::dateTime
+    character(len=10):: ampm
+    integer:: d, h, m, n, s, y, mm, values(8)
+    character(len=3), parameter, dimension(12) :: &
+      month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    call date_and_time(values=values)
+
+    y = values(1)
+    m = values(2)
+    d = values(3)
+    h = values(5)
+    n = values(6)
+    s = values(7)
+    mm = values(8)
+
+    if (h < 12) then
+      ampm = 'AM'
+    elseif (h == 12) then
+      if (n == 0 .and. s == 0) then
+        ampm = 'Noon'
+      else
+        ampm = 'PM'
+      end if
+    else
+      h = h - 12
+      if (h < 12) then
+        ampm = 'PM'
+      elseif (h == 12) then
+        if (n == 0 .and. s == 0) then
+          ampm = 'Midnight'
+        else
+          ampm = 'AM'
+        end if
+      end if
+    end if
+
+    write (dateTime, '(i2,1x,a,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)') &
+      d, trim(month(m)), y, h, ':', n, ':', s, '.', mm, trim(ampm)
+
+  end function dateTime
 
 end module model
 
