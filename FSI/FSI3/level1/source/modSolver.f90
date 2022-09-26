@@ -5,7 +5,8 @@ module solver
 
   integer, allocatable, dimension(:, :), protected::isn
   double precision, allocatable, dimension(:, :, :), protected:: ft
-  double precision, allocatable, dimension(:, :), protected:: ux, uy, rho
+  ! double precision, allocatable, dimension(:, :), protected:: ux, uy, rho
+  type(pointVar_t), allocatable, dimension(:, :), protected:: lbm
   !====================================
   ! integer::a, ia, ja, i, j, k, m, n, p, cnt, t_
   ! integer, protected:: cFSinteract
@@ -57,9 +58,10 @@ contains
     solnumber = 0
 
     allocate (ft(0:q - 1, nx + 2, ny + 2))
-    allocate (ux(nx + 2, ny + 2))
-    allocate (uy(nx + 2, ny + 2))
-    allocate (rho(nx + 2, ny + 2))
+    ! allocate (ux(nx + 2, ny + 2))
+    ! allocate (uy(nx + 2, ny + 2))
+    ! allocate (rho(nx + 2, ny + 2))
+    allocate (lbm(nx + 2, ny + 2))
     allocate (isn(nx + 2, ny + 2))
 
     allocate (bounDofTopEl(0:degEl*size(topEl), 2))
@@ -280,10 +282,10 @@ contains
           tmp3 = tmp3 + f(a, i, j)*ci(a, 2)
         end do
 
-        rho(i, j) = tmp1
+        lbm(i, j)%r = tmp1
         tmp4 = 1.0d0/tmp1
-        ux(i, j) = tmp2*tmp4!tmp2/tmp1
-        uy(i, j) = tmp3*tmp4!tmp3/tmp1
+        lbm(i, j)%u = tmp2*tmp4!tmp2/tmp1
+        lbm(i, j)%v = tmp3*tmp4!tmp3/tmp1
         rhoSum = rhoSum + tmp1
       end do
     end do
@@ -298,9 +300,9 @@ contains
     do j = 2, ny + 1
       do i = 2, nx + 1
         do a = 0, q - 1
-          tmp1 = ux(i, j)*ci(a, 1) + uy(i, j)*ci(a, 2)
-          tmp2 = ux(i, j)*ux(i, j) + uy(i, j)*uy(i, j)
-          feq = wi(a)*rho(i, j)*(1.0 + 3.0*tmp1 + 4.5*tmp1*tmp1 - 1.5*tmp2)
+          tmp1 = lbm(i, j)%u*ci(a, 1) + lbm(i, j)%v*ci(a, 2)
+          tmp2 = lbm(i, j)%u*lbm(i, j)%u + lbm(i, j)%v*lbm(i, j)%v
+          feq = wi(a)*lbm(i, j)%r*(1.0 + 3.0*tmp1 + 4.5*tmp1*tmp1 - 1.5*tmp2)
           ft(a, i, j) = f(a, i, j) - (f(a, i, j) - feq)*invTau !collision
         end do
       end do
@@ -341,18 +343,18 @@ contains
       else
         uParaRamp_ = uPara_
       end if
-      rho(i, j) = (f(0, i, j) + f(2, i, j) + f(4, i, j) + 2*(f(6, i, j) + f(3, i, j) + f(7, i, j)))/(1 - uParaRamp_)
-      f(1, i, j) = f(3, i, j) + ((2.0/3.0)*rho(i, j)*uParaRamp_)
-      f(5, i, j) = f(7, i, j) - (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*rho(i, j)*uParaRamp_)
-      f(8, i, j) = f(6, i, j) + (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*rho(i, j)*uParaRamp_)
+      lbm(i, j)%r = (f(0, i, j) + f(2, i, j) + f(4, i, j) + 2*(f(6, i, j) + f(3, i, j) + f(7, i, j)))/(1 - uParaRamp_)
+      f(1, i, j) = f(3, i, j) + ((2.0/3.0)*lbm(i, j)%r*uParaRamp_)
+      f(5, i, j) = f(7, i, j) - (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*lbm(i, j)%r*uParaRamp_)
+      f(8, i, j) = f(6, i, j) + (0.5*(f(2, i, j) - f(4, i, j))) + ((1.0/6.0)*lbm(i, j)%r*uParaRamp_)
     end do
 
     do j = 2, ny + 1
       i = nx + 1
-      ux(i, j) = (f(0, i, j) + f(2, i, j) + f(4, i, j) + 2*(f(1, i, j) + f(5, i, j) + f(8, i, j)))/rhoF_ - 1
-      f(3, i, j) = f(1, i, j) - ((2.0/3.0)*rhoF_*ux(i, j))
-      f(6, i, j) = f(8, i, j) - 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*ux(i, j))
-      f(7, i, j) = f(5, i, j) + 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*ux(i, j))
+      lbm(i, j)%u = (f(0, i, j) + f(2, i, j) + f(4, i, j) + 2*(f(1, i, j) + f(5, i, j) + f(8, i, j)))/rhoF_ - 1
+      f(3, i, j) = f(1, i, j) - ((2.0/3.0)*rhoF_*lbm(i, j)%u)
+      f(6, i, j) = f(8, i, j) - 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*lbm(i, j)%u)
+      f(7, i, j) = f(5, i, j) + 0.5*(f(2, i, j) - f(4, i, j)) - ((1.0/6.0)*rhoF_*lbm(i, j)%u)
     end do
 
   end subroutine applyInletOutletBC2
@@ -954,7 +956,7 @@ contains
 
     do j = 2, ny + 1
       do i = 2, nx + 1
-        write (12, '(2(2X,I5),3(2X,E12.4),2X,I3)') i, j, ux(i, j), uy(i, j), rho(i, j), isn(i, j)
+        write (12, '(2(2X,I5),3(2X,E12.4),2X,I3)') i, j, lbm(i, j)%u, lbm(i, j)%v, lbm(i, j)%r, isn(i, j)
       end do
       write (12, *)
     end do

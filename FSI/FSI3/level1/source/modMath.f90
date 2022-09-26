@@ -15,14 +15,14 @@ contains
     double precision :: dotProd
     integer :: i
 
-    if (size(A) /= size(B)) then
-      write (*, *) 'Incompatible Vectors'
-      stop
-    else
+    if (size(A) == size(B)) then
       dotProd = 0.0
       do i = 1, size(A)
         dotProd = dotProd + A(i)*B(i)
       end do
+    else
+      write (*, *) 'Incompatible Vectors'
+      stop
     end if
   end function dotProd
 
@@ -34,18 +34,18 @@ contains
     double precision, dimension(size(A, 1), size(B, 2)) :: mulMat
     integer :: i, j, k
 
-    if (size(A, 2) /= size(B, 1)) then
+    if (size(A, 2) == size(B, 1)) then
+      mulMat = 0.0d0
+      do j = 1, size(B, 2)
+        ! do i = 1, size(A, 1)
+        do k = 1, size(A, 2)
+          mulMat(:, j) = mulMat(:, j) + A(:, k)*B(k, j)
+        end do
+        ! end do
+      end do
+    else
       write (*, *) 'Incompatible Martices'
       stop
-    else
-      do i = 1, size(A, 1)
-        do j = 1, size(B, 2)
-          mulMat(i, j) = 0.0
-          do k = 1, size(A, 2)
-            mulMat(i, j) = mulMat(i, j) + A(i, k)*B(k, j)
-          end do
-        end do
-      end do
     end if
 
   end function mulMat
@@ -58,16 +58,16 @@ contains
     double precision, dimension(size(A, 1)) :: mulMatVec
     integer :: i, k
 
-    if (size(A, 2) /= size(B)) then
-      write (*, *) 'Incompatible Martix-Vector Multiplication'
-      stop
-    else
-      do i = 1, size(A, 1)
-        mulMatVec(i) = 0.0d0
-        do k = 1, size(A, 2)
+    if (size(A, 2) == size(B)) then
+      mulMatVec = 0.0d0
+      do k = 1, size(A, 2)
+        do i = 1, size(A, 1)
           mulMatVec(i) = mulMatVec(i) + A(i, k)*B(k)
         end do
       end do
+    else
+      write (*, *) 'Incompatible Martix-Vector Multiplication'
+      stop
     end if
 
   end function mulMatVec
@@ -81,19 +81,19 @@ contains
     double precision, dimension(size(b)) :: mulMatBVec
     integer :: i, j, n
 
-    if (size(AB, 2) /= size(b)) then
-      write (*, *) 'Incompatible Band Martix-Vector Multiplication'
-      stop
-    else
+    if (size(AB, 2) == size(b)) then
       n = size(AB, 2)
-      do i = 1, n
-        mulMatBVec(i) = 0.0d0
-        do j = 1, n
+      mulMatBVec = 0.0d0
+      do j = 1, n
+        do i = 1, n
           if (i .ge. max(1, j - nUdiag) .and. i .le. min(n, j + nLdiag)) then
             mulMatBVec(i) = mulMatBVec(i) + AB(nLdiag + nUdiag + 1 + i - j, j)*b(j)
           end if
         end do
       end do
+    else
+      write (*, *) 'Incompatible Band Martix-Vector Multiplication'
+      stop
     end if
 
   end function mulMatBVec

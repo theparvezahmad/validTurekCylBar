@@ -8,7 +8,7 @@ module input
     dim = 2, &
     chanH_ = 82, &
     q = 9, &
-    totTime_ = 250, &
+    totTime_ = 2500, &
     noOfSnaps = 3, &
     dispFreq = 10, &
     avgSpan = 2

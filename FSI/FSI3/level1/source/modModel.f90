@@ -7,6 +7,17 @@ module model
   implicit none
   public
 
+  type dualDP_t
+    double precision::x
+    double precision::y
+  end type dualDP_t
+
+  type pointVar_t
+    double precision::r
+    double precision::u
+    double precision::v
+  end type pointVar_t
+
   integer, protected::nx, ny
   double precision, protected:: Clen, Crho, Ct, Cnu, CVel, CFor, tau, invTau
   double precision, protected:: nu_, uMean_, xc_, yc_, dia_, chanL_, barL_, barH_
