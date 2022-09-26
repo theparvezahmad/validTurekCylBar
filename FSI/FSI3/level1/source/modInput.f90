@@ -2,11 +2,13 @@ module input
   implicit none
   public
 
+  character(len=10), parameter:: case = "C1"
+
   integer, parameter:: &
     dim = 2, &
     chanH_ = 82, &
     q = 9, &
-    totTime_ = 100000, &
+    totTime_ = 250, &
     noOfSnaps = 3, &
     dispFreq = 10, &
     avgSpan = 2

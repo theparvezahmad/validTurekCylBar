@@ -111,11 +111,14 @@ contains
 
     Fx = d0
     Fy = d0
-    open (unit=10, file="../output/Fluid_tRhoCdCl.dat")
+
+    filename = "../output/Fluid_"//trim(Case)//".dat"
+    open (unit=10, file=filename)
     write (10, *) "Variables=timeLBM,timeReal,rho,Cd,Cl"
 
-    open (UNIT=11, file='../output/Solid_tUxUy.dat')
-    write (11, *) "Variables=timeReal,ux,uy"
+    filename = "../output/Solid_"//trim(Case)//".dat"
+    open (UNIT=11, file=filename)
+    write (11, *) "Variables=timeReal,ux,uy,error,nIter"
 
     nUdiag = coupleRange
     nLdiag = coupleRange
@@ -127,6 +130,7 @@ contains
     t = 0.0d0!tStart
     t_ = 0
     totTime = totTime_*Ct
+    call detectCylAndWalls()
 
     do while (t .lt. totTime)
 
@@ -147,7 +151,7 @@ contains
 
       call applyInletOutletBC2()
 
-      call detectDeformedShape()
+      call detectDeformedBar()
 
       call applyObjWallBC_calcForceObj()!(cFSinteract, surfForce)
       ! allocate(surfForce(6,4))
@@ -246,7 +250,7 @@ contains
       if (t_ .le. totTime_ .and. mod(t_, (totTime_/(noOfSnaps - 1))) .eq. 0) then
 
         solnumber = solnumber + 1
-        write (filename, '(a,i3.3,a)') "../output/snap", solnumber, ".dat"
+        write (filename, '(a,i3.3,3(a))') "../output/snap", solnumber, "_", trim(case), ".dat"
         call writeSoln(filename)
         write (*, '(a,I3,a,I8)') "snap", solnumber, " recorded at LBM time %d", t_
       end if
@@ -353,27 +357,21 @@ contains
 
   end subroutine applyInletOutletBC2
 
-  subroutine detectDeformedShape()!(isn)
+  subroutine detectDeformedBar()!(isn)
     implicit none
 
     ! integer, dimension(:, :), intent(out) :: isn
     integer::i, j, k, m
-    logical::isCyl, isBar
-    double precision::ii, jj
+    logical::isBar
+    ! double precision::ii, jj
     double precision, allocatable, dimension(:)::xIntersect, uniqSortedA
 
     call mapGlobal2Local(X, DeltaEl)
-    isn = 0
-    do i = 2, nx + 1
-      do j = 2, ny + 2
+    do i = ceiling(xc_ + 0.5d0*dia_), int(xc_ + 0.5d0*dia_ + barL_ + 3)
+      do j = int(yc_ - dia_), int(yc_ + dia_)
 
         isBar = .false.
-        isCyl = .false.
-
-        ii = i! - 1.5
-        jj = j! - 1.5
-
-        isCyl = ((ii - xc_)**2.0 + (jj - yc_)**2.0)**0.5 .le. 0.5*dia_
+        isn(i, j) = 0
 
         bounDofTopEl(0, 1:2) = 0.0d0
         do k = 1, size(topEl)
@@ -430,22 +428,18 @@ contains
         bounCoord(degEl*(size(topEl) + size(rightEl) + size(bottomEl)) + 2, :) = bounDispTopEl(0, :) !to close the polygon
         ! bounCoord(degEl*(size(topEl)+size(rightEl)+size(bottomEl))+3,:)=0.5d0*(bounDispTopEl(0,:) + bounDispBottomEl(0,:)) !to close the polygon
 
-        xIntersect = linPieceWiseIntersect([ii, jj], bounCoord)
-        ! xIntersect=quadPieceWiseIntersect([ii,jj],bounCoord)
+        xIntersect = linPieceWiseIntersect([dble(i), dble(j)], bounCoord)
+        ! xIntersect=quadPieceWiseIntersect([i,j],bounCoord)
         uniqSortedA = sortAscendUnique(xIntersect)
 
         do k = 1, size(uniqSortedA)
-          if (ii .le. uniqSortedA(k)) then
+          if (i .le. uniqSortedA(k)) then
             if (mod(k, 2) == 0) then
               isBar = .true.
             end if
             exit
           end if
         end do
-
-        if (isCyl) then
-          isn(i, j) = 1
-        end if
 
         if (isBar) then
           isn(i, j) = 2
@@ -454,23 +448,60 @@ contains
       end do
     end do
 
+    ! filename = "../output/Region_"//trim(Case)//".dat"
+    ! open (unit=12, file=filename)
+
+    ! write (12, *) "Variables=x,y,region"
+    ! write (12, '(2(a,I5))') "Zone I=", nx + 2, ",J=", ny + 2
+
+    ! do j = 1, ny + 2
+    !   do i = 1, nx + 2
+    !     write (12, '(2(2X,I5),2X,I3)') i, j, isn(i, j)
+    !   end do
+    !   write (12, *)
+    ! end do
+    ! close (12)
+    ! stop
+  end subroutine detectDeformedBar
+
+  subroutine detectCylAndWalls()!(isn)
+    implicit none
+
+    integer::i, j
+    logical::isCyl
+
+    ! isn = 0
+    do i = int(xc_ - dia_), int(xc_ + dia_)
+      do j = int(yc_ - dia_), int(yc_ + dia_)
+
+        isCyl = .false.
+
+        isCyl = ((i - xc_)**2.0 + (j - yc_)**2.0)**0.5 .le. 0.5*dia_
+
+        if (isCyl) then
+          isn(i, j) = 1
+        end if
+
+      end do
+    end do
+
     isn(:, 1) = 3
     isn(:, ny + 2) = 3
 
-    open (unit=12, file="../output/region.dat")
+    ! open (unit=12, file="../output/region.dat")
 
-    write (12, *) "Variables=x,y,region"
-    write (12, '(2(a,I5))') "Zone I=", nx, ",J=", ny
+    ! write (12, *) "Variables=x,y,region"
+    ! write (12, '(2(a,I5))') "Zone I=", nx, ",J=", ny
 
-    do j = 2, ny + 1
-      do i = 2, nx + 1
-        write (12, '(2(2X,I5),2X,I3)') i, j, isn(i, j)
-      end do
-      write (12, *)
-    end do
-    close (12)
+    ! do j = 1, ny + 2
+    !   do i = 1, nx + 2
+    !     write (12, '(2(2X,I5),2X,I3)') i, j, isn(i, j)
+    !   end do
+    !   write (12, *)
+    ! end do
+    ! close (12)
     ! stop
-  end subroutine detectDeformedShape
+  end subroutine detectCylAndWalls
 
   subroutine applyObjWallBC_calcForceObj()
     implicit none
