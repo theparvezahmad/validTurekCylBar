@@ -10,16 +10,16 @@ contains
   function dotProd(A, B)
     implicit none
 
-    double precision, dimension(:), intent(in)  :: A
-    double precision, dimension(:), intent(in)  :: B
+    double precision, dimension(:), contiguous, intent(in)  :: A
+    double precision, dimension(:), contiguous, intent(in)  :: B
     double precision :: dotProd
-    integer :: i
+    ! integer :: i
 
     if (size(A) == size(B)) then
-      dotProd = 0.0
-      do i = 1, size(A)
-        dotProd = dotProd + A(i)*B(i)
-      end do
+      ! dotProd = 0.0
+      ! do i = 1, size(A)
+      dotProd = sum(A(:)*B(:))
+      ! end do
     else
       write (*, *) 'Incompatible Vectors'
       stop
@@ -29,8 +29,8 @@ contains
   function mulMat(A, B)
     implicit none
 
-    double precision, dimension(:, :), intent(in)  :: A
-    double precision, dimension(:, :), intent(in)  :: B
+    double precision, dimension(:, :), contiguous, intent(in)  :: A
+    double precision, dimension(:, :), contiguous, intent(in)  :: B
     double precision, dimension(size(A, 1), size(B, 2)) :: mulMat
     integer :: i, j, k
 
@@ -53,8 +53,8 @@ contains
   function mulMatVec(A, B)
     implicit none
 
-    double precision, dimension(:, :), intent(in)  :: A
-    double precision, dimension(:), intent(in)  :: B
+    double precision, dimension(:, :), contiguous, intent(in)  :: A
+    double precision, dimension(:), contiguous, intent(in)  :: B
     double precision, dimension(size(A, 1)) :: mulMatVec
     integer :: i, k
 
@@ -75,8 +75,8 @@ contains
   function mulMatBVec(AB, b, nUdiag, nLdiag)
     implicit none
 
-    double precision, dimension(:, :), intent(in)  :: AB
-    double precision, dimension(:), intent(in)  :: b
+    double precision, dimension(:, :), contiguous, intent(in)  :: AB
+    double precision, dimension(:), contiguous, intent(in)  :: b
     integer, intent(in):: nUdiag, nLdiag
     double precision, dimension(size(b)) :: mulMatBVec
     integer :: i, j, n
