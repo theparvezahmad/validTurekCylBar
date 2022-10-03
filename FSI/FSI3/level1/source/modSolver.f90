@@ -41,7 +41,7 @@ module solver
   double precision, allocatable, dimension(:) :: X, Xd, Xdd, XOld, XdOld, XddOld
   double precision, allocatable, dimension(:) :: Xi, Xidd, Xii, Xti
 
-  double precision :: tol, err
+  double precision :: tol, err, errNormDen
   double precision, allocatable, dimension(:, :):: stepLoad
   ! double precision::stepLoad
   integer, allocatable, dimension(:)::pivot
@@ -133,6 +133,7 @@ contains
     t_ = 0
     totTime = totTime_*Ct
     call detectCylAndWalls()
+    call detectDeformedBar()
 
     do while (t .lt. totTime)
 
@@ -152,8 +153,6 @@ contains
       call stream()
 
       call applyInletOutletBC2()
-
-      call detectDeformedBar()
 
       call applyObjWallBC_calcForceObj()!(cFSinteract, surfForce)
       ! allocate(surfForce(6,4))
@@ -208,7 +207,14 @@ contains
           !call DGESV(nDofBC, 1, Mtemp, nDofBC, pivot, Xii, nDofBC, ok)
           call DGBSV(nDofBC, nLdiag, nUdiag, 1, Mtemp, ldab, pivot, Xii, nDofBC, ok)
           Xi = Xi + Xii
-          err = norm2(Xii)/norm2(Xi + X)
+
+          errNormDen = norm2(Xi + X)
+          if (errNormDen .ne. 0.0d0) then
+            err = norm2(Xii)/errNormDen
+          else
+            err = 0.0d0
+          end if
+
           if (cntIter == 10) exit
         end do !iter loop ends
 
@@ -332,7 +338,7 @@ contains
     implicit none
 
     integer::i, j
-    double precision::uPara_, uParaRamp_, tmp1, tmp2
+    double precision::uPara_, uParaRamp_, tmp1!, tmp2
     tmp1 = 1.0d0/(ny**2.0d0)
 
     do j = 2, ny + 1
@@ -904,7 +910,7 @@ contains
 
           ! fPSI = mulMatVec(PSIt, [0.0d0, stepLoad])
           fPSI = stepLoad(:, iEl)
-          F02 = F02 + tmp*Wt(j)*Wt(i)*fPSI
+          F02 = fPSI !F02 + tmp*Wt(j)*Wt(i)*fPSI
         end do
       end do
 

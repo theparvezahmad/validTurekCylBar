@@ -32,7 +32,7 @@ contains
     double precision, dimension(:, :), contiguous, intent(in)  :: A
     double precision, dimension(:, :), contiguous, intent(in)  :: B
     double precision, dimension(size(A, 1), size(B, 2)) :: mulMat
-    integer :: i, j, k
+    integer :: j, k!,i
 
     if (size(A, 2) == size(B, 1)) then
       mulMat = 0.0d0
