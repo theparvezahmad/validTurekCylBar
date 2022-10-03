@@ -26,7 +26,7 @@ module fem
 
 contains
 
-  function psiN(eta, xi)
+  function psiN(xi, eta)
     implicit none
 
     double precision, intent(in) :: eta, xi
@@ -149,7 +149,7 @@ contains
 
   ! end function psiN
 
-  function dpsiNdXi(eta, xi)
+  function dpsiNdXi(xi, eta)
     implicit none
 
     double precision, intent(in) :: eta, xi
@@ -272,7 +272,7 @@ contains
 
   ! end function dpsiNdXi
 
-  function dpsiNdEta(eta, xi)
+  function dpsiNdEta(xi, eta)
     implicit none
 
     double precision, intent(in) :: eta, xi
