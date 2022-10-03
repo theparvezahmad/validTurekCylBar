@@ -41,8 +41,8 @@ set key right top
 #plot "dynamic.dat" every ::401::2000 u 1:2 w l ls 1
 #plot "dynamic.dat" every ::1601::2000 u 1:2 title "code" w l ls 1, "yDisp.txt" u 1:($2*-1) '%lf,%lf' title "benchmark" w l ls 2
 #plot "dynamic.dat" every ::801::1000 u 1:2 title "code" w l ls 1, "yDisp.txt" u 1:($2*-1) '%lf,%lf' title "benchmark" w l ls 2
-set output 'ux_spanyxFy.png'
-plot "dynamic.dat" every ::399::499 u 1:2 title "code" w l ls 1, "xDisp.txt" u 1:2 '%lf,%lf' title "benchmark" w l ls 2 dashtype 4
+set output 'uxPtLoad.png'
+plot "dynamic.dat" every ::0::499 u 1:2 title "code" w l ls 1#, "xDisp.txt" u 1:2 '%lf,%lf' title "benchmark" w l ls 2 dashtype 4
 
-set output 'uy_spanyxFy.png'
-plot "dynamic.dat" every ::399::499 u 1:3 title "code" w l ls 1, "yDisp.txt" u 1:2 '%lf,%lf' title "benchmark" w l ls 2 dashtype 4
+set output 'uyPtLoad.png'
+plot "dynamic.dat" every ::0::499 u 1:3 title "code" w l ls 1#, "yDisp.txt" u 1:2 '%lf,%lf' title "benchmark" w l ls 2 dashtype 4
