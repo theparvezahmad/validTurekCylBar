@@ -133,7 +133,6 @@ contains
     t_ = 0
     totTime = totTime_*Ct
     call detectCylAndWalls()
-    call detectDeformedBar()
 
     do while (t .lt. totTime)
 
@@ -153,6 +152,8 @@ contains
       call stream()
 
       call applyInletOutletBC2()
+
+      call detectDeformedBar()
 
       call applyObjWallBC_calcForceObj()!(cFSinteract, surfForce)
       ! allocate(surfForce(6,4))
@@ -957,12 +958,14 @@ contains
 
     open (unit=12, file=filename)
 
-    write (12, *) "Variables=x,y,u,v,rho,region"
+    ! write (12, *) "Variables=x,y,u,v,rho,region"
+    write (12, *) "Variables=x,y,region"
     write (12, '(2(a,I5))') "Zone I=", nx, ",J=", ny
 
     do j = 2, ny + 1
       do i = 2, nx + 1
-        write (12, '(2(2X,I5),3(2X,E12.4),2X,I3)') i, j, lbm(i, j)%u, lbm(i, j)%v, lbm(i, j)%r, isn(i, j)
+        ! write (12, '(2(2X,I5),3(2X,E12.4),2X,I3)') i, j, lbm(i, j)%u, lbm(i, j)%v, lbm(i, j)%r, isn(i, j)
+        write (12, '(2(2X,I5),2X,I3)') i, j, isn(i, j)
       end do
       write (12, *)
     end do
