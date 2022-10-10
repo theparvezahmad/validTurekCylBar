@@ -9,7 +9,7 @@ module userInput
     Ly = 0.02d0, &
     Lz = 1.0d0, &
     totalLoad = -rho*2.0d0, &
-    pointLoad = -93295.0d0
+    pointLoad = -200000.0d0
 
   integer, parameter :: &
     degEl = 2, &

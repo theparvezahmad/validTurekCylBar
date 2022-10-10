@@ -133,7 +133,7 @@ contains
         stepLoad = pointLoad*iLoad/noOfLoadSteps
 
         !Xi=zeros(nDofBC,1);
-        call calcMgKgFg(X, stepLoad, MgB, KgB, Fg)
+        call calcMgKgFg(X, stepLoad, MgB, KgB, Fg, t)
         !call calcMgKgFg(X, stepLoad)
         !Xi=(a0*Mg + Kg)\(Fg + Mg*(a2*XdOld + a3*XddOld))
         Xi = Fg + mulMatBVec(MgB, a2*XdOld + a3*XddOld, nUdiag, nLdiag)
@@ -149,7 +149,7 @@ contains
           cntIter = cntIter + 1
           Xidd = a0*Xi - a2*XdOld - a3*XddOld
           Xti = X + Xi
-          call calcMgKgFg(Xti, stepLoad, MgB, KgB, Fg)
+          call calcMgKgFg(Xti, stepLoad, MgB, KgB, Fg, t)
           !Xii=(a0*Mg + Kg)\(Fg - Mg*Xidd)
           Xii = Fg - mulMatBVec(MgB, Xidd, nUdiag, nLdiag)
           Mtemp = a0*MgB + KgB
@@ -193,11 +193,11 @@ contains
 
   end subroutine compDynRes
 
-  subroutine calcMgKgFg(DeltaG, stepLoad, MgB, KgB, Fg)
+  subroutine calcMgKgFg(DeltaG, stepLoad, MgB, KgB, Fg, t)
     !subroutine calcMgKgFg(DeltaG, stepLoad)
     implicit none
     double precision, dimension(:), intent(in) :: DeltaG
-    double precision, intent(in) :: stepLoad
+    double precision, intent(in) :: stepLoad, t
     double precision, allocatable, dimension(:, :), intent(out) :: KgB, MgB
     double precision, allocatable, dimension(:), intent(out) :: Fg
 
@@ -400,7 +400,7 @@ contains
       end do
       !end
     end do
-    Fg(nDofBC) = Fg(nDofBC) + pointLoad
+    Fg(nDofBC) = Fg(nDofBC) + pointLoad*dsin(2.0d0*pi*t)
   end subroutine calcMgKgFg
 
   subroutine setupElemMapYX(dofMapBC_, coupleRange_)

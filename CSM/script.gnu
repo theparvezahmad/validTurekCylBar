@@ -26,6 +26,7 @@ set grid back ls 12
 unset grid
 
 set terminal pngcairo enhanced color dashed font "Alegreya, 14" \
+# set terminal pdfcairo enhanced color# dashed font "Alegreya, 14" \
 #rounded size 25 cm, 10 cm
 
 # Default encoding, line styles, pallette, border and grid are set in
