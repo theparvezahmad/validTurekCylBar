@@ -2,7 +2,8 @@ module userInput
   implicit none
   public
   double precision, parameter :: &
-    E = 200.0d9, &
+    ! E = 200.0d9, &
+    E = 1.4d6, &
     v = 0.4d0, &
     rho = 1.0d3, &
     Lx = 0.35d0, &
@@ -22,8 +23,8 @@ module userInput
     alpha = 0.25d0, & !Newmark Parameters
     beta = 0.5d0, &
     tStart = 0.0d0, &
-    tEnd = 2.0d0, &
-    dt = 0.02d0
+    tEnd = 3.0d0, &
+    dt = 0.01d0
 
   integer, parameter ::          noOfLoadSteps = 1
 

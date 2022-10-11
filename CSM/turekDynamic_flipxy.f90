@@ -400,7 +400,11 @@ contains
       end do
       !end
     end do
-    Fg(nDofBC) = Fg(nDofBC) + pointLoad*dsin(2.0d0*pi*t)
+    ! Fg(nDofBC) = Fg(nDofBC) + pointLoad*dsin(2.0d0*pi*t)
+    Fg(140) = Fg(140) + (-2)
+    Fg(412) = Fg(412) + (+1)
+    Fg(560) = Fg(560) + (-1)
+    Fg(700) = Fg(700) + (-3)!*dsin(2.0d0*pi*t)
   end subroutine calcMgKgFg
 
   subroutine setupElemMapYX(dofMapBC_, coupleRange_)
