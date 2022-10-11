@@ -8,7 +8,7 @@ module userInput
     rho = 1.0d3, &
     Lx = 0.35d0, &
     Ly = 0.02d0, &
-    Lz = 1.0d0, &
+    Lz = 1.7d0, &
     totalLoad = -rho*2.0d0, &
     pointLoad = -200000.0d0
 
