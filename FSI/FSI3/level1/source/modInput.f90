@@ -2,11 +2,11 @@ module input
   implicit none
   public
 
-  character(len=10), parameter:: case = "C2"
+  character(len=10), parameter:: case = "C3"
   !C0: No solid shape update
   integer, parameter:: &
     dim = 2, &
-    chanH_ = 164, &
+    chanH_ = 205, &
     q = 9, &
     totTime_ = 100000, &
     noOfSnaps = 401, &
@@ -17,7 +17,8 @@ module input
     rhoF_ = 1.0d0, &
     rhoF = 1000.0d0, &
     chanL = 2.5d0, & !Length of channel
-    chanH = 0.41d0, & !Width of channel
+    chanH = 0.41d0, & !Height of channel
+    chanW = 1.0d0, & !Width of channel(into the plane)
     barL = 0.35d0, &
     barH = 0.02d0, &
     uMean = 0.2d0, &

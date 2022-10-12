@@ -20,7 +20,7 @@ module model
 
   integer, protected::nx, ny
   double precision, protected:: Clen, Crho, Ct, Cnu, CVel, CFor, tau, invTau
-  double precision, protected:: nu_, uMean_, xc_, yc_, dia_, chanL_, barL_, barH_
+  double precision, protected:: nu_, uMean_, xc_, yc_, dia_, chanL_, chanW_, barL_, barH_
 
   double precision, allocatable, dimension(:, :, :):: f
 
@@ -42,14 +42,15 @@ contains
 
     Clen = chanH/chanH_
     Crho = rhoF/rhoF_
-    Ct = dia/uMean*0.002d0 !Time Period of fundamental node
+    Ct = dia/uMean*0.0002d0 !Time Period of fundamental node
     Cnu = Clen**2.0d0/Ct
     CVel = Clen/Ct
-    ! CFor = Crho*Clen**4.0d0*Ct**(-2.0d0)
-    CFor = Crho*Clen**3.0d0*Ct**(-2.0d0)
+    CFor = Crho*Clen**4.0d0*Ct**(-2.0d0)
+    ! CFor = Crho*Clen**3.0d0*Ct**(-2.0d0)
 
     !===Other LBM parameters===
     chanL_ = chanL/Clen
+    chanW_ = chanW/Clen
     dia_ = dia/Clen
     xc_ = xc/Clen + 1.5d0
     yc_ = yc/Clen + 1.5d0
@@ -70,7 +71,7 @@ contains
     write (*, *) 'uMax_ = ', 1.5d0*uMean_
     write (*, *) 'Re_SI = ', uMean*dia/nu
     write (*, *) 'Re_LBM = ', uMean_*dia_/nu_
-
+    ! stop
   end subroutine setupLBMvars
 
   subroutine setupFEMvars()

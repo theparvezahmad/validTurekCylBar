@@ -114,11 +114,11 @@ contains
     Fx = d0
     Fy = d0
 
-    filename = "../output/Fluid_"//trim(Case)//".dat"
+    filename = "../output/C3/Fluid_"//trim(Case)//".dat"
     open (unit=10, file=filename)
     write (10, *) "Variables=timeLBM,timeReal,rho,Cd,Cl"
 
-    filename = "../output/Solid_"//trim(Case)//".dat"
+    filename = "../output/C3/Solid_"//trim(Case)//".dat"
     open (UNIT=11, file=filename)
     write (11, *) "Variables=timeReal,ux,uy,error,nIter"
 
@@ -143,7 +143,7 @@ contains
 
       ! rhoAvg = sum(rho)/(nx*ny)
       if (rhoSum/(nx*ny) .gt. 10.0d0) then
-        write (*, *) 'Code Diverged'
+        write (*, *) 'Code Diverged. Aborting'
         stop
       end if
 
@@ -182,7 +182,7 @@ contains
         !loadVec=linspace(totalLoad/noOfLoadSteps,totalLoad,noOfLoadSteps)
         !stepLoad=loadVec(iLoad)
         ! stepLoad = totalLoad*iLoad/noOfLoadSteps
-        stepLoad = PSItPointForce*CFor*iLoad/noOfLoadSteps
+        stepLoad = PSItPointForce*CFor*chanW_*iLoad/noOfLoadSteps
 
         !Xi=zeros(nDofBC,1);
         call calcMgKgFg(X, stepLoad, MgB, KgB, Fg)
@@ -259,7 +259,7 @@ contains
       if (t_ .le. totTime_ .and. mod(t_, (totTime_/(noOfSnaps - 1))) .eq. 0) then
 
         solnumber = solnumber + 1
-        write (filename, '(a,i3.3,3(a))') "../output/snap", solnumber, "_", trim(case), ".dat"
+        write (filename, '(a,i3.3,3(a))') "../output/C3/snap", solnumber, "_", trim(case), ".dat"
         call writeSoln(filename)
         write (*, '(a,I3,a,I8)') "snap", solnumber, " recorded at LBM time %d", t_
       end if
@@ -575,8 +575,8 @@ contains
 
     Fx_t = sum(Fx)/min(t_ + 1, avgSpan)
     Fy_t = sum(Fy)/min(t_ + 1, avgSpan)
-    Cd = Fx_t*CFor!/(0.5*rhoF_*uMean_*uMean_*dia_)
-    Cl = Fy_t*CFor!/(0.5*rhoF_*uMean_*uMean_*dia_)
+    Cd = Fx_t*CFor*chanW_ !/(0.5*rhoF_*uMean_*uMean_*dia_)
+    Cl = Fy_t*CFor*chanW_ !/(0.5*rhoF_*uMean_*uMean_*dia_)
     !----------------------------------------------------------------------
     Fx(1:avgSpan - 1) = Fx(2:avgSpan)
     Fy(1:avgSpan - 1) = Fy(2:avgSpan)
