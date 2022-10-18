@@ -15,13 +15,14 @@ module solver
   ! double precision:: Fx(avgSpan), Fy(avgSpan), FxLocal, FyLocal
   ! double precision:: wi(0:q - 1)
 
-  double precision, allocatable, dimension(:, :, :), protected:: DeltaEl
+  double precision, allocatable, dimension(:, :, :), protected:: DeltaEl, XdLocal
   integer, protected:: nUdiag, nLdiag, ldab
   ! double precision, allocatable, dimension(:) :: DeltaG
   ! integer, allocatable, dimension(:)::hash
 
   double precision, allocatable, dimension(:, :), protected::bounDofTopEl, bounDofBottomEl, bounDofRightEl
-  double precision, allocatable, dimension(:, :), protected::bounDispTopEl, bounDispBottomEl, bounDispRightEl, bounCoord
+  double precision, allocatable, dimension(:, :), protected::bounDispTopEl, bounDispBottomEl, bounDispRightEl, bounDisp
+  double precision, allocatable, dimension(:, :), protected::bounVelTopEl, bounVelBottomEl, bounVelRightEl, bounVel
 
   double precision, allocatable, dimension(:, :), protected::surfForce, uniqSurfForce
 
@@ -71,8 +72,12 @@ contains
     allocate (bounDispTopEl(0:degEl*size(topEl), 2))
     allocate (bounDispBottomEl(0:degEl*size(bottomEl), 2))
     allocate (bounDispRightEl(0:degEl*size(rightEl), 2))
+    allocate (bounDisp(degEl*(size(topEl) + size(bottomEl) + size(rightEl)) + 2, 2))
 
-    allocate (bounCoord(degEl*(size(topEl) + size(bottomEl) + size(rightEl)) + 2, 2))
+    allocate (bounVelTopEl(0:degEl*size(topEl), 2))
+    allocate (bounVelBottomEl(0:degEl*size(bottomEl), 2))
+    allocate (bounVelRightEl(0:degEl*size(rightEl), 2))
+    allocate (bounVel(degEl*(size(topEl) + size(bottomEl) + size(rightEl)) + 2, 2))
 
     dt = Ct
     a0 = 1.0d0/(alpha*dt**2.0d0)
@@ -114,11 +119,11 @@ contains
     Fx = d0
     Fy = d0
 
-    filename = "../output/C3/Fluid_"//trim(Case)//".dat"
+    filename = "../output/C4/Fluid_"//trim(Case)//".dat"
     open (unit=10, file=filename)
     write (10, *) "Variables=timeLBM,timeReal,rho,Cd,Cl"
 
-    filename = "../output/C3/Solid_"//trim(Case)//".dat"
+    filename = "../output/C4/Solid_"//trim(Case)//".dat"
     open (UNIT=11, file=filename)
     write (11, *) "Variables=timeReal,ux,uy,error,nIter"
 
@@ -132,6 +137,8 @@ contains
     t = 0.0d0!tStart
     t_ = 0
     totTime = totTime_*Ct
+
+    isn = 0
     call detectCylAndWalls()
 
     do while (t .lt. totTime)
@@ -153,9 +160,15 @@ contains
 
       call applyInletOutletBC2()
 
+      call collectBounDisp()
+
       call detectDeformedBar()
 
-      call applyObjWallBC_calcForceObj()!(cFSinteract, surfForce)
+      call collectBounVel()
+
+      call applyWallBC()
+
+      call applyCylBarBC()!(cFSinteract, surfForce)
       ! allocate(surfForce(6,4))
       ! surfForce = reshape([1, 3, 5, 6,&
       !                      1, 3, 3, 9,&
@@ -259,7 +272,7 @@ contains
       if (t_ .le. totTime_ .and. mod(t_, (totTime_/(noOfSnaps - 1))) .eq. 0) then
 
         solnumber = solnumber + 1
-        write (filename, '(a,i3.3,3(a))') "../output/C3/snap", solnumber, "_", trim(case), ".dat"
+        write (filename, '(a,i3.3,3(a))') "../output/C4/snap", solnumber, "_", trim(case), ".dat"
         call writeSoln(filename)
         write (*, '(a,I3,a,I8)') "snap", solnumber, " recorded at LBM time %d", t_
       end if
@@ -366,78 +379,153 @@ contains
 
   end subroutine applyInletOutletBC2
 
+  subroutine collectBounDisp()
+    implicit none
+
+    integer::k, m
+
+    call mapGlobal2Local(X, DeltaEl)
+
+    bounDofTopEl(0, 1:2) = 0.0d0
+    do k = 1, size(topEl)
+      do m = 0, degEl - 1
+        bounDofTopEl(degEl*k - m, 1) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, 1.0d0), DeltaEl(:, 1, topEl(k)))
+        bounDofTopEl(degEl*k - m, 2) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, 1.0d0), DeltaEl(:, 2, topEl(k)))
+      end do
+      ! bounDofTopEl(k, 1) = dotProd(psiN(1.0d0, 1.0d0), DeltaEl(:, 1, topEl(k)))
+      ! bounDofTopEl(k, 2) = dotProd(psiN(1.0d0, 1.0d0), DeltaEl(:, 2, topEl(k)))
+    end do
+
+    bounDofBottomEl(0, 1:2) = 0.0d0
+    do k = 1, size(bottomEl)
+      do m = 0, degEl - 1
+        bounDofBottomEl(degEl*k - m, 1) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, -1.0d0), DeltaEl(:, 1, bottomEl(k)))
+        bounDofBottomEl(degEl*k - m, 2) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, -1.0d0), DeltaEl(:, 2, bottomEl(k)))
+      end do
+      ! bounDofBottomEl(k, 1) = dotProd(psiN(1.0d0, -1.0d0), DeltaEl(:, 1, bottomEl(k)))
+      ! bounDofBottomEl(k, 2) = dotProd(psiN(1.0d0, -1.0d0), DeltaEl(:, 2, bottomEl(k)))
+    end do
+
+    bounDofRightEl(0, 1) = dotProd(psiN(1.0d0, -1.0d0), DeltaEl(:, 1, rightEl(1)))
+    bounDofRightEl(0, 2) = dotProd(psiN(1.0d0, -1.0d0), DeltaEl(:, 2, rightEl(1)))
+    do k = 1, size(rightEl)
+      do m = 0, degEl - 1
+        bounDofRightEl(degEl*k - m, 1) = dotProd(psiN(1.0d0, 1.0d0 - dble(2*m)/degEl), DeltaEl(:, 1, rightEl(k)))
+        bounDofRightEl(degEl*k - m, 2) = dotProd(psiN(1.0d0, 1.0d0 - dble(2*m)/degEl), DeltaEl(:, 2, rightEl(k)))
+      end do
+      ! bounDofRightEl(k, 1) = dotProd(psiN(1.0d0, 1.0d0), DeltaEl(:, 1, rightEl(k)))
+      ! bounDofRightEl(k, 2) = dotProd(psiN(1.0d0, 1.0d0), DeltaEl(:, 2, rightEl(k)))
+    end do
+    !------------------------------------------------------------
+    ! write (*, *) linPieceWiseYonX(-3.0d0, reshape([0.0d0, 1.0d0, 2.0d0, 3.0d0, 10.0d0, 20.0d0, 15.0d0, 0.0d0], [4, 2]))
+    ! write (*, *) linPieceWiseXonY(2.8d0, reshape([10.0d0, 20.0d0, 15.0d0, 0.0d0, 0.0d0, 1.0d0, 2.0d0, 3.0d0], [4, 2]))
+    ! xIntersect = linPieceWiseIntersect([1.0d0,20.0d0],&
+    ! reshape([0.0d0, 1.0d0, 2.0d0, 3.0d0,0.0d0,0.0d0, 10.0d0, 20.0d0, 15.0d0, 0.0d0,0.0d0,10.0d0], [6, 2]))
+    ! xIntersect = quadPieceWiseIntersect([1.5d0,5.0d0],&
+    ! reshape([0.0d0,0.0d0, 1.0d0, 2.0d0, 3.0d0,3.0d0,0.0d0,0.0d0,10.0d0, 10.0d0, 10.0d0, 10.0d0, 0.0d0,0.0d0], [7, 2]))
+    ! write(*,*) quadPieceWiseXonY(1.5,&
+    ! reshape([0.0d0,0.0d0, 1.0d0, 2.0d0, 3.0d0,3.0d0,0.0d0,0.0d0,10.0d0, 10.0d0, 10.0d0, 10.0d0, 0.0d0,0.0d0], [7, 2]))
+
+    ! uniqSortedA = sortAscendUnique([-5.0d0,0.0d0,1.0d0,3.0d0,10.0d0,5.8d0,2.0d0,5.0d0])
+    ! uniqSortedA = sortAscendUnique([0.0d0,0.0d0,0.0d0,0.0d0,3.2d0,0.0d0,0.0d0,0.0d0])
+    ! uniqSortedA = sortAscendUnique(xIntersect)
+
+    bounDispTopEl = refBounTopEl + bounDofTopEl/Clen
+    bounDispBottomEl = refBounBottomEl + bounDofBottomEl/Clen
+    bounDispRightEl = refBounRightEl + bounDofRightEl/Clen
+
+    bounDisp(1:degEl*size(topEl) + 1, :) = bounDispTopEl
+    bounDisp(degEl*(size(topEl) + size(rightEl)) + 1:degEl*size(topEl) + 1:-1, :) = bounDispRightEl
+    bounDisp(degEl*(size(topEl) + size(rightEl) + size(bottomEl)) + 1:degEl*(size(topEl) + size(rightEl)) + 1:-1, :) = &
+      bounDispBottomEl
+    bounDisp(degEl*(size(topEl) + size(rightEl) + size(bottomEl)) + 2, :) = bounDispTopEl(0, :) !to close the polygon
+    ! bounCoord(degEl*(size(topEl)+size(rightEl)+size(bottomEl))+3,:)=0.5d0*(bounDispTopEl(0,:) + bounDispBottomEl(0,:)) !to close the polygon
+
+  end subroutine collectBounDisp
+
+  subroutine collectBounVel()
+    implicit none
+
+    integer:: k, m
+
+    call mapGlobal2Local(Xd, XdLocal)
+
+    bounDofTopEl(0, 1:2) = 0.0d0
+    do k = 1, size(topEl)
+      do m = 0, degEl - 1
+        bounDofTopEl(degEl*k - m, 1) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, 1.0d0), XdLocal(:, 1, topEl(k)))
+        bounDofTopEl(degEl*k - m, 2) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, 1.0d0), XdLocal(:, 2, topEl(k)))
+      end do
+      ! bounDofTopEl(k, 1) = dotProd(psiN(1.0d0, 1.0d0), XdLocal(:, 1, topEl(k)))
+      ! bounDofTopEl(k, 2) = dotProd(psiN(1.0d0, 1.0d0), XdLocal(:, 2, topEl(k)))
+    end do
+
+    bounDofBottomEl(0, 1:2) = 0.0d0
+    do k = 1, size(bottomEl)
+      do m = 0, degEl - 1
+        bounDofBottomEl(degEl*k - m, 1) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, -1.0d0), XdLocal(:, 1, bottomEl(k)))
+        bounDofBottomEl(degEl*k - m, 2) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, -1.0d0), XdLocal(:, 2, bottomEl(k)))
+      end do
+      ! bounDofBottomEl(k, 1) = dotProd(psiN(1.0d0, -1.0d0), XdLocal(:, 1, bottomEl(k)))
+      ! bounDofBottomEl(k, 2) = dotProd(psiN(1.0d0, -1.0d0), XdLocal(:, 2, bottomEl(k)))
+    end do
+
+    bounDofRightEl(0, 1) = dotProd(psiN(1.0d0, -1.0d0), XdLocal(:, 1, rightEl(1)))
+    bounDofRightEl(0, 2) = dotProd(psiN(1.0d0, -1.0d0), XdLocal(:, 2, rightEl(1)))
+    do k = 1, size(rightEl)
+      do m = 0, degEl - 1
+        bounDofRightEl(degEl*k - m, 1) = dotProd(psiN(1.0d0, 1.0d0 - dble(2*m)/degEl), XdLocal(:, 1, rightEl(k)))
+        bounDofRightEl(degEl*k - m, 2) = dotProd(psiN(1.0d0, 1.0d0 - dble(2*m)/degEl), XdLocal(:, 2, rightEl(k)))
+      end do
+      ! bounDofRightEl(k, 1) = dotProd(psiN(1.0d0, 1.0d0), XdLocal(:, 1, rightEl(k)))
+      ! bounDofRightEl(k, 2) = dotProd(psiN(1.0d0, 1.0d0), XdLocal(:, 2, rightEl(k)))
+    end do
+    !------------------------------------------------------------
+    ! write (*, *) linPieceWiseYonX(-3.0d0, reshape([0.0d0, 1.0d0, 2.0d0, 3.0d0, 10.0d0, 20.0d0, 15.0d0, 0.0d0], [4, 2]))
+    ! write (*, *) linPieceWiseXonY(2.8d0, reshape([10.0d0, 20.0d0, 15.0d0, 0.0d0, 0.0d0, 1.0d0, 2.0d0, 3.0d0], [4, 2]))
+    ! xIntersect = linPieceWiseIntersect([1.0d0,20.0d0],&
+    ! reshape([0.0d0, 1.0d0, 2.0d0, 3.0d0,0.0d0,0.0d0, 10.0d0, 20.0d0, 15.0d0, 0.0d0,0.0d0,10.0d0], [6, 2]))
+    ! xIntersect = quadPieceWiseIntersect([1.5d0,5.0d0],&
+    ! reshape([0.0d0,0.0d0, 1.0d0, 2.0d0, 3.0d0,3.0d0,0.0d0,0.0d0,10.0d0, 10.0d0, 10.0d0, 10.0d0, 0.0d0,0.0d0], [7, 2]))
+    ! write(*,*) quadPieceWiseXonY(1.5,&
+    ! reshape([0.0d0,0.0d0, 1.0d0, 2.0d0, 3.0d0,3.0d0,0.0d0,0.0d0,10.0d0, 10.0d0, 10.0d0, 10.0d0, 0.0d0,0.0d0], [7, 2]))
+
+    ! uniqSortedA = sortAscendUnique([-5.0d0,0.0d0,1.0d0,3.0d0,10.0d0,5.8d0,2.0d0,5.0d0])
+    ! uniqSortedA = sortAscendUnique([0.0d0,0.0d0,0.0d0,0.0d0,3.2d0,0.0d0,0.0d0,0.0d0])
+    ! uniqSortedA = sortAscendUnique(xIntersect)
+
+    bounVelTopEl = bounDofTopEl/CVel
+    bounVelBottomEl = bounDofBottomEl/CVel
+    bounVelRightEl = bounDofRightEl/CVel
+
+    bounVel(1:degEl*size(topEl) + 1, :) = bounVelTopEl
+    bounVel(degEl*(size(topEl) + size(rightEl)) + 1:degEl*size(topEl) + 1:-1, :) = bounVelRightEl
+    bounVel(degEl*(size(topEl) + size(rightEl) + size(bottomEl)) + 1:degEl*(size(topEl) + size(rightEl)) + 1:-1, :) = &
+      bounVelBottomEl
+    bounVel(degEl*(size(topEl) + size(rightEl) + size(bottomEl)) + 2, :) = bounVelTopEl(0, :) !to close the polygon
+    ! bounCoord(degEl*(size(topEl)+size(rightEl)+size(bottomEl))+3,:)=0.5d0*(bounVelTopEl(0,:) + bounVelBottomEl(0,:)) !to close the polygon
+    write (*, *) "Max Nodal u: ", maxval(bounVel(:, 1)), " at LBM time ", t_
+    if (maxval(bounVel(:, 1)) .gt. 10.0d0) error stop "Nodal u above 10"
+    write (*, *) "Max Nodal v: ", maxval(bounVel(:, 2)), " at LBM time ", t_
+    if (maxval(bounVel(:, 2)) .gt. 10.0d0) error stop "Nodal v above 10"
+  end subroutine collectBounVel
+
   subroutine detectDeformedBar()!(isn)
     implicit none
 
     ! integer, dimension(:, :), intent(out) :: isn
-    integer::i, j, k, m
+    integer::i, j, k
     logical::isBar
     ! double precision::ii, jj
     double precision, allocatable, dimension(:)::xIntersect, uniqSortedA
 
-    call mapGlobal2Local(X, DeltaEl)
     do i = ceiling(xc_ + 0.5d0*dia_), int(xc_ + 0.5d0*dia_ + barL_ + 3)
       do j = int(yc_ - dia_), int(yc_ + dia_)
 
         isBar = .false.
         isn(i, j) = 0
 
-        bounDofTopEl(0, 1:2) = 0.0d0
-        do k = 1, size(topEl)
-          do m = 0, degEl - 1
-            bounDofTopEl(degEl*k - m, 1) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, 1.0d0), DeltaEl(:, 1, topEl(k)))
-            bounDofTopEl(degEl*k - m, 2) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, 1.0d0), DeltaEl(:, 2, topEl(k)))
-          end do
-          ! bounDofTopEl(k, 1) = dotProd(psiN(1.0d0, 1.0d0), DeltaEl(:, 1, topEl(k)))
-          ! bounDofTopEl(k, 2) = dotProd(psiN(1.0d0, 1.0d0), DeltaEl(:, 2, topEl(k)))
-        end do
-
-        bounDofBottomEl(0, 1:2) = 0.0d0
-        do k = 1, size(bottomEl)
-          do m = 0, degEl - 1
-            bounDofBottomEl(degEl*k - m, 1) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, -1.0d0), DeltaEl(:, 1, bottomEl(k)))
-            bounDofBottomEl(degEl*k - m, 2) = dotProd(psiN(1.0d0 - dble(2*m)/degEl, -1.0d0), DeltaEl(:, 2, bottomEl(k)))
-          end do
-          ! bounDofBottomEl(k, 1) = dotProd(psiN(1.0d0, -1.0d0), DeltaEl(:, 1, bottomEl(k)))
-          ! bounDofBottomEl(k, 2) = dotProd(psiN(1.0d0, -1.0d0), DeltaEl(:, 2, bottomEl(k)))
-        end do
-
-        bounDofRightEl(0, 1) = dotProd(psiN(1.0d0, -1.0d0), DeltaEl(:, 1, rightEl(1)))
-        bounDofRightEl(0, 2) = dotProd(psiN(1.0d0, -1.0d0), DeltaEl(:, 2, rightEl(1)))
-        do k = 1, size(rightEl)
-          do m = 0, degEl - 1
-            bounDofRightEl(degEl*k - m, 1) = dotProd(psiN(1.0d0, 1.0d0 - dble(2*m)/degEl), DeltaEl(:, 1, rightEl(k)))
-            bounDofRightEl(degEl*k - m, 2) = dotProd(psiN(1.0d0, 1.0d0 - dble(2*m)/degEl), DeltaEl(:, 2, rightEl(k)))
-          end do
-          ! bounDofRightEl(k, 1) = dotProd(psiN(1.0d0, 1.0d0), DeltaEl(:, 1, rightEl(k)))
-          ! bounDofRightEl(k, 2) = dotProd(psiN(1.0d0, 1.0d0), DeltaEl(:, 2, rightEl(k)))
-        end do
-        !------------------------------------------------------------
-        ! write (*, *) linPieceWiseYonX(-3.0d0, reshape([0.0d0, 1.0d0, 2.0d0, 3.0d0, 10.0d0, 20.0d0, 15.0d0, 0.0d0], [4, 2]))
-        ! write (*, *) linPieceWiseXonY(2.8d0, reshape([10.0d0, 20.0d0, 15.0d0, 0.0d0, 0.0d0, 1.0d0, 2.0d0, 3.0d0], [4, 2]))
-        ! xIntersect = linPieceWiseIntersect([1.0d0,20.0d0],&
-        ! reshape([0.0d0, 1.0d0, 2.0d0, 3.0d0,0.0d0,0.0d0, 10.0d0, 20.0d0, 15.0d0, 0.0d0,0.0d0,10.0d0], [6, 2]))
-        ! xIntersect = quadPieceWiseIntersect([1.5d0,5.0d0],&
-        ! reshape([0.0d0,0.0d0, 1.0d0, 2.0d0, 3.0d0,3.0d0,0.0d0,0.0d0,10.0d0, 10.0d0, 10.0d0, 10.0d0, 0.0d0,0.0d0], [7, 2]))
-        ! write(*,*) quadPieceWiseXonY(1.5,&
-        ! reshape([0.0d0,0.0d0, 1.0d0, 2.0d0, 3.0d0,3.0d0,0.0d0,0.0d0,10.0d0, 10.0d0, 10.0d0, 10.0d0, 0.0d0,0.0d0], [7, 2]))
-
-        ! uniqSortedA = sortAscendUnique([-5.0d0,0.0d0,1.0d0,3.0d0,10.0d0,5.8d0,2.0d0,5.0d0])
-        ! uniqSortedA = sortAscendUnique([0.0d0,0.0d0,0.0d0,0.0d0,3.2d0,0.0d0,0.0d0,0.0d0])
-        ! uniqSortedA = sortAscendUnique(xIntersect)
-
-        bounDispTopEl = refBounTopEl + bounDofTopEl/Clen
-        bounDispBottomEl = refBounBottomEl + bounDofBottomEl/Clen
-        bounDispRightEl = refBounRightEl + bounDofRightEl/Clen
-
-        bounCoord(1:degEl*size(topEl) + 1, :) = bounDispTopEl
-        bounCoord(degEl*(size(topEl) + size(rightEl)) + 1:degEl*size(topEl) + 1:-1, :) = bounDispRightEl
-        bounCoord(degEl*(size(topEl) + size(rightEl) + size(bottomEl)) + 1:degEl*(size(topEl) + size(rightEl)) + 1:-1, :) = &
-          bounDispBottomEl
-        bounCoord(degEl*(size(topEl) + size(rightEl) + size(bottomEl)) + 2, :) = bounDispTopEl(0, :) !to close the polygon
-        ! bounCoord(degEl*(size(topEl)+size(rightEl)+size(bottomEl))+3,:)=0.5d0*(bounDispTopEl(0,:) + bounDispBottomEl(0,:)) !to close the polygon
-
-        xIntersect = linPieceWiseIntersect([dble(i), dble(j)], bounCoord)
+        xIntersect = linPieceWiseIntersect([dble(i), dble(j)], bounDisp)
         ! xIntersect=quadPieceWiseIntersect([i,j],bounCoord)
         uniqSortedA = sortAscendUnique(xIntersect)
 
@@ -512,13 +600,55 @@ contains
     ! stop
   end subroutine detectCylAndWalls
 
-  subroutine applyObjWallBC_calcForceObj()
+  subroutine applyWallBC()
+    implicit none
+
+    ! double precision, allocatable, dimension(:, :) :: surfForce
+    integer:: i, j, a, ia, ja
+
+    j = 2
+    do i = 2, nx + 1 !BC
+      if (isn(i, j) .eq. 0) then
+
+        do a = 0, q - 1
+
+          ia = i + int(ci(a, 1))
+          ja = j + int(ci(a, 2))
+
+          if (isn(ia, ja) .eq. 3) then !wall
+            f(kb(a), i, j) = ft(a, i, j)
+          end if
+
+        end do
+      end if
+    end do
+
+    j = ny + 1
+    do i = 2, nx + 1 !BC
+      if (isn(i, j) .eq. 0) then
+
+        do a = 0, q - 1
+
+          ia = i + int(ci(a, 1))
+          ja = j + int(ci(a, 2))
+
+          if (isn(ia, ja) .eq. 3) then !wall
+            f(kb(a), i, j) = ft(a, i, j)
+          end if
+
+        end do
+      end if
+    end do
+
+  end subroutine applyWallBC
+
+  subroutine applyCylBarBC()
     implicit none
 
     ! double precision, allocatable, dimension(:, :) :: surfForce
     integer:: i, j, a, ia, ja, cFSinteract
     double precision, allocatable, dimension(:, :) :: surfForce_
-    double precision:: tmp1, tmp2, Fx_t, Fy_t
+    double precision:: tmp1, tmp2, Fx_t, Fy_t, ub(2)
 
     allocate (surfForce_(int(2*barL_ + barH_)*4, 4))
 
@@ -526,8 +656,9 @@ contains
     Fy(avgSpan) = d0
     cFSinteract = 0
 
-    do j = 2, ny + 1
-      do i = 2, nx + 1 !BC
+    do i = int(xc_ - dia_), int(xc_ + dia_ + barL_)
+      do j = int(yc_ - dia_), int(yc_ + dia_)
+
         if (isn(i, j) .eq. 0) then
 
           do a = 0, q - 1
@@ -547,8 +678,11 @@ contains
             end if
 
             if (isn(ia, ja) .eq. 2) then !elastic bar
-              f(kb(a), i, j) = ft(a, i, j)
-              f(a, ia, ja) = ft(kb(a), ia, ja)
+
+              call findVelAtNode([0.5d0*(i + ia), 0.5d0*(j + ja)], ub)
+
+              f(kb(a), i, j) = ft(a, i, j) + 6.0*wi(a)*rhoF_*(ub(1)*ci(kb(a), 1) + ub(2)*ci(kb(a), 2))
+              f(a, ia, ja) = ft(kb(a), ia, ja) - 6.0*wi(a)*rhoF_*(ub(1)*ci(kb(a), 1) + ub(2)*ci(kb(a), 2))
 
               tmp1 = ci(a, 1)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
               Fx(avgSpan) = Fx(avgSpan) + tmp1
@@ -559,10 +693,6 @@ contains
               cFSinteract = cFSinteract + 1
               ! ! surfForce_(cFSinteract, :) = [0.5*(i + ia) - 1.5d0, 0.5*(j + ja) - 1.5d0, tmp1, tmp2]
               surfForce_(cFSinteract, :) = [0.5d0*(i + ia), 0.5d0*(j + ja), tmp1, tmp2]
-            end if
-
-            if (isn(ia, ja) .eq. 3) then !wall
-              f(kb(a), i, j) = ft(a, i, j)
             end if
 
           end do
@@ -581,7 +711,7 @@ contains
     Fx(1:avgSpan - 1) = Fx(2:avgSpan)
     Fy(1:avgSpan - 1) = Fy(2:avgSpan)
 
-  end subroutine applyObjWallBC_calcForceObj
+  end subroutine applyCylBarBC
 
   subroutine addDuplicateFields()!(surfForce, uniqSurfForce)
     implicit none
@@ -739,6 +869,63 @@ contains
     end do
 
   end subroutine distSurfForce2Elem
+
+  subroutine findVelAtNode(pt, ub)!(uniqSurfForce, PSItPointForce)
+    implicit none
+
+    integer::i
+    double precision, dimension(:), intent(in):: pt
+    double precision:: x1, x2, y1, y2, x, y, fracDis, ub(2)
+
+    x = pt(1)
+    y = pt(2)
+
+    do i = 0, size(bounDispTopEl, 1) - 2
+      x1 = bounDispTopEl(i, 1)
+      x2 = bounDispTopEl(i + 1, 1)
+      y1 = bounDispTopEl(i, 2)
+      y2 = bounDispTopEl(i + 1, 2)
+
+      if (x .ge. x1 .and. x .lt. x2 .and. y .gt. (min(y1, y2) - 0.5d0) .and. y .lt. (max(y1, y2) + 0.5d0)) then
+
+        fracDis = sqrt((x - x1)**2.0d0 + (y - y1)**2.0d0)/sqrt((x2 - x1)**2.0d0 + (y2 - y1)**2.0d0)
+        ub(1) = (1 - fracDis)*bounVelTopEl(i, 1) + fracDis*bounVelTopEl(i + 1, 1)
+        ub(2) = (1 - fracDis)*bounVelTopEl(i, 2) + fracDis*bounVelTopEl(i + 1, 2)
+
+      end if
+    end do
+
+    do i = 0, size(bounDispBottomEl, 1) - 2
+      x1 = bounDispBottomEl(i, 1)
+      x2 = bounDispBottomEl(i + 1, 1)
+      y1 = bounDispBottomEl(i, 2)
+      y2 = bounDispBottomEl(i + 1, 2)
+
+      if (x .ge. x1 .and. x .lt. x2 .and. y .gt. (min(y1, y2) - 0.5d0) .and. y .lt. (max(y1, y2) + 0.5d0)) then
+
+        fracDis = sqrt((x - x1)**2.0d0 + (y - y1)**2.0d0)/sqrt((x2 - x1)**2.0d0 + (y2 - y1)**2.0d0)
+        ub(1) = (1 - fracDis)*bounVelBottomEl(i, 1) + fracDis*bounVelBottomEl(i + 1, 1)
+        ub(2) = (1 - fracDis)*bounVelBottomEl(i, 2) + fracDis*bounVelBottomEl(i + 1, 2)
+
+      end if
+    end do
+
+    do i = 0, size(bounDispRightEl, 1) - 2
+      x1 = bounDispRightEl(i, 1)
+      x2 = bounDispRightEl(i + 1, 1)
+      y1 = bounDispRightEl(i, 2)
+      y2 = bounDispRightEl(i + 1, 2)
+
+      if (x .gt. (min(x1, x2) - 0.5d0) .and. x .lt. (max(x1, x2) + 0.5d0) .and. y .ge. y1 .and. y .lt. y2) then
+
+        fracDis = sqrt((x - x1)**2.0d0 + (y - y1)**2.0d0)/sqrt((x2 - x1)**2.0d0 + (y2 - y1)**2.0d0)
+        ub(1) = (1 - fracDis)*bounVelRightEl(i, 1) + fracDis*bounVelRightEl(i + 1, 1)
+        ub(2) = (1 - fracDis)*bounVelRightEl(i, 2) + fracDis*bounVelRightEl(i + 1, 2)
+
+      end if
+    end do
+
+  end subroutine findVelAtNode
 
   subroutine calcMgKgFg(DeltaG, stepLoad, MgB, KgB, Fg)
     !subroutine calcMgKgFg(DeltaG, stepLoad)

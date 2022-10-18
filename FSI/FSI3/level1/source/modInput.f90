@@ -2,14 +2,14 @@ module input
   implicit none
   public
 
-  character(len=10), parameter:: case = "C3"
+  character(len=10), parameter:: case = "C4"
   !C0: No solid shape update
   integer, parameter:: &
     dim = 2, &
     chanH_ = 205, &
     q = 9, &
-    totTime_ = 100000, &
-    noOfSnaps = 401, &
+    totTime_ = 400, &
+    noOfSnaps = 101, &
     dispFreq = 1, &
     avgSpan = 2
 

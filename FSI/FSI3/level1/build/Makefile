@@ -14,8 +14,8 @@ $(SRC_DIR)turekFSI.f90
 OBJS := ${SRCS:$(SRC_DIR)%.f90=$(BUILD_DIR)%.o}
 
 FC := ifort #fortran compiler
-FFLAGS :=-mkl -CB -traceback# -xCORE-AVX2# -qopenmp #-CB -traceback
-# FFLAGS :=-mkl -g -check all -fpe0 -warn -traceback -debug extended
+FFLAGS :=-qmkl# -CB -traceback# -xCORE-AVX2# -qopenmp #-CB -traceback
+# FFLAGS :=-qmkl -g -check all -fpe0 -warn -traceback -debug extended
 # FC := gfortran
 # FFLAGS := -g# -fopenmp #-CB -traceback
 # LIBS := -llapack -lblas
