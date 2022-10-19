@@ -163,8 +163,8 @@ contains
       call collectBounDisp()
 
       call detectDeformedBar()
-
-      call collectBounVel()
+      ! Xd(560) = 3.0d0
+      ! call collectBounVel()
 
       call applyWallBC()
 
@@ -679,10 +679,13 @@ contains
 
             if (isn(ia, ja) .eq. 2) then !elastic bar
 
-              call findVelAtNode([0.5d0*(i + ia), 0.5d0*(j + ja)], ub)
+              ! call findVelAtNode([0.5d0*(i + ia), 0.5d0*(j + ja)], ub)
+              ! call findVelAtNode([265.25d0, 106.1d0], ub)
+              ! write (*, *) Xd(560), ub(1), ub(2)
+              ! ! stop
 
-              f(kb(a), i, j) = ft(a, i, j) + 6.0*wi(a)*rhoF_*(ub(1)*ci(kb(a), 1) + ub(2)*ci(kb(a), 2))
-              f(a, ia, ja) = ft(kb(a), ia, ja) - 6.0*wi(a)*rhoF_*(ub(1)*ci(kb(a), 1) + ub(2)*ci(kb(a), 2))
+              f(kb(a), i, j) = ft(a, i, j)! + 6.0*wi(a)*rhoF_*(ub(1)*ci(kb(a), 1) + ub(2)*ci(kb(a), 2))
+              f(a, ia, ja) = ft(kb(a), ia, ja)! - 6.0*wi(a)*rhoF_*(ub(1)*ci(kb(a), 1) + ub(2)*ci(kb(a), 2))
 
               tmp1 = ci(a, 1)*2.0*(-ft(kb(a), ia, ja) + ft(a, i, j))
               Fx(avgSpan) = Fx(avgSpan) + tmp1

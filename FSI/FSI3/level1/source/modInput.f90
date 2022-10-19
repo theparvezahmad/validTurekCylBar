@@ -8,8 +8,8 @@ module input
     dim = 2, &
     chanH_ = 205, &
     q = 9, &
-    totTime_ = 400, &
-    noOfSnaps = 101, &
+    totTime_ = 200000, &
+    noOfSnaps = 401, &
     dispFreq = 1, &
     avgSpan = 2
 
