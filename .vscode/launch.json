@@ -1,17 +1,17 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Run GDB",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/CSM/turekCSM.x",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceRoot}/CSM",
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "preLaunchTask": "make"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run GDB",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceRoot}/CSM/build/csm.x",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceRoot}/CSM/build",
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "preLaunchTask": "make"
+    }
+  ]
 }

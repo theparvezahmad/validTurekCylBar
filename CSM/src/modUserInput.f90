@@ -2,21 +2,21 @@ module userInput
   implicit none
   public
   double precision, parameter :: &
-    ! E = 200.0d9, &
-    E = 1.4d6, &
-    v = 0.4d0, &
-    rho = 1.0d3, &
-    Lx = 0.35d0, &
-    Ly = 0.02d0, &
-    Lz = 1.7d0, &
-    totalLoad = -rho*2.0d0, &
-    pointLoad = -200000.0d0
-
+    E = 200.0d9, &
+    ! E = 1.4d6, &
+    v = 0.3d0, &
+    rho = 7850, &
+    Lx = 10.0d0, &
+    Ly = 1.0d0, &
+    Lz = 0.1d0, &
+    ! totalLoad = -rho*2.0d0, &
+    totalLoad = -6.0d7
+  ! pointLoad = -200000.0d0
   integer, parameter :: &
     degEl = 2, &
     flag = 0, &
-    nElx = 35, &
-    nEly = 2, &
+    nElx = 40, &
+    nEly = 4, &
     nDofPerNode = 2
 
   double precision, parameter :: &

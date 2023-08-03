@@ -1,19 +1,30 @@
-FC=ifort #fortran compiler
-# FC=gfortran
-FFLAGS=-mkl #-g
-#-warn all -check all -stand f18 
-# -g
-# -traceback -CB
-# LIBS=-llapack -lblas
-#-O3 -Wall -Wextra -std=f2008 #optimization (for level 3) flags, compiler warnings and the strictest adherence to the latest standards
-SRC=modUserInput.f90 modShapeFun_yx.f90 modMathOp.f90 turekDynamic_flipxy.f90
-OBJ=${SRC:.f90=.o} #substitute .f90 with .o
+TARGET := csm.x
+BUILD_DIR :=
+SRC_DIR := ../src/
 
-%.o: %.f90 #wildcard rule, creation of *.o depends on *.f90
-	$(FC) $(FFLAGS) -o $@ -c $< $(LIBS) 
+SRCS := \
+$(SRC_DIR)modUserInput.f90 \
+$(SRC_DIR)modShapeFun_yx.f90 \
+$(SRC_DIR)modMathOp.f90 \
+$(SRC_DIR)nonLinSolid2D.f90
 
-turekCSM.x: $(OBJ)
-	$(FC) $(FFLAGS) -o $@ $(OBJ) $(LIBS)
+OBJS := ${SRCS:$(SRC_DIR)%.f90=$(BUILD_DIR)%.o}
 
-clean: #cleans all the old compilation files
-	@rm -f *.mod *.o turekCSM.x
+FC := ifort #fortran compiler
+FFLAGS :=-qmkl -g -CB -traceback# -xCORE-AVX2# -qopenmp #-CB -traceback
+# FFLAGS :=-qmkl -g -check all -fpe0 -warn -traceback -debug extended
+# FC := gfortran
+# FFLAGS := -g# -fopenmp #-CB -traceback
+# LIBS := -llapack -lblas
+# LIBS= -L/usr/local/lib/ -llapack -lblas
+
+
+$(TARGET): $(OBJS)
+	$(FC) $(FFLAGS) -o $@ $(OBJS) $(LIBS)
+
+$(BUILD_DIR)%.o: $(SRC_DIR)%.f90 #wildcard rule, creation of *.o depends on *.f90
+	$(FC) $(FFLAGS) -o $@ -c $< $(LIBS)
+
+.PHONY: clean
+clean:
+	@rm -f -v $(BUILD_DIR)*.mod *.o *.x
